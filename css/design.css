@@ -1,121 +1,207 @@
 @charset "UTF-8";
-@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css');
 
 /* ==========================================================================
-   TEMA MASTER (DARK MODE CHEVRON)
-   Garante compatibilidade total com as classes do jarvis.html original
+   1. VARIÁVEIS DE TEMA (DARK MODE PREMIUM - PADRÃO CHEVRON)
    ========================================================================== */
 :root {
-  /* 1. Cores de Fundo (Superfícies) - Tons escuros profissionais */
-  --surf-0: #020617; /* Fundo absoluto do sistema (Pátio e Fundo Geral) */
-  --surf-1: #0f172a; /* Fundo dos cartões, tabelas e painéis principais */
-  --surf-2: #1e293b; /* Fundo de inputs, abas e hover de linhas */
-  --surf-3: #334155; /* Fundo de botões secundários e badges */
+    /* Superfícies e Fundos */
+    --bg-darker: #020617;      /* Fundo profundo da página */
+    --bg-card: #0f172a;        /* Fundo de cartões e sidebar */
+    --bg-black: #000000;       /* Fundo de inputs e tabelas */
+    
+    /* Cores de Destaque */
+    --brand-info: #0ea5e9;     /* Azul Chevron */
+    --brand-success: #10b981;  /* Verde Sucesso */
+    --brand-warning: #f59e0b;  /* Amarelo/Laranja Alerta */
+    --brand-danger: #ef4444;   /* Vermelho Urgente */
+    
+    /* Bordas e Linhas */
+    --border-color: #1e293b;
+    --border-light: #334155;
 
-  /* 2. Cores de Bordas */
-  --border: #1e293b;
-  --border-med: #334155;
-  --border-hi: #475569;
-
-  /* 3. Identidade Visual (Marca) e Destaques */
-  --brand: #0ea5e9; /* Azul Premium (Chevron) */
-  --brand-dim: rgba(14, 165, 233, 0.15); /* Fundo translúcido para botões da marca */
-  --brand-dark: #0284c7;
-  --brand-glow: rgba(14, 165, 233, 0.4); /* Sombra brilhante para botões principais */
-
-  /* 4. Cores de Status Financeiro e Kanban */
-  --success: #10b981; /* Verde (Entregue / Lucro) */
-  --warn: #f59e0b;    /* Laranja/Amarelo (Orçamento / Atenção) */
-  --danger: #ef4444;  /* Vermelho (Atrasado / Despesa / Exclusão) */
-
-  /* 5. Tipografia (Cores do Texto) */
-  --text-primary: #f8fafc;   /* Branco forte (Títulos e dados importantes) */
-  --text-secondary: #cbd5e1; /* Cinzento claro (Subtítulos) */
-  --text-muted: #64748b;     /* Cinzento escuro (Dicas e placeholders) */
-  --text-disabled: #475569;  /* Texto inativo */
-
-  /* 6. Famílias de Fontes (As mesmas requisitadas no head do seu jarvis.html) */
-  --ff-display: 'Sora', sans-serif;
-  --ff-body: 'DM Sans', sans-serif;
-  --ff-mono: 'DM Mono', monospace;
-
-  /* 7. Arredondamentos (Bordas modernas) */
-  --r-md: 8px;
-  --r-lg: 12px;
-  --r-xl: 16px;
-  --r-2xl: 24px;
+    /* Tipografia */
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
 }
 
-/* ==========================================================================
-   RESET E CONFIGURAÇÕES GLOBAIS
-   ========================================================================== */
+/*Configurações Gerais de Reset */
 * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+    box-sizing: border-box;
 }
 
 body {
-  background-color: var(--surf-0);
-  color: var(--text-primary);
-  font-family: var(--ff-body);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg-darker) !important;
+    color: var(--text-main);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
 }
 
 /* ==========================================================================
-   SCROLLBARS PREMIUM (Rolar sem poluir a tela)
+   2. SIDEBAR E NAVEGAÇÃO
    ========================================================================== */
+.sidebar {
+    background-color: var(--bg-card) !important;
+    border-right: 1px solid var(--border-color) !important;
+    box-shadow: 10px 0 15px rgba(0,0,0,0.3);
+}
+
+.nav-btn {
+    transition: all 0.2s ease-in-out;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.nav-btn:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-main) !important;
+}
+
+.nav-btn.active {
+    background-color: rgba(14, 165, 233, 0.1) !important;
+    color: var(--brand-info) !important;
+    border-left: 4px solid var(--brand-info) !important;
+}
+
+/* ==========================================================================
+   3. KANBAN (PÁTIO) - CUSTOMIZAÇÃO
+   ========================================================================== */
+.kanban-container {
+    background-color: var(--bg-darker);
+    padding-bottom: 20px;
+}
+
+.kanban-col {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Cartão da O.S. */
+.os-card {
+    background-color: var(--bg-black);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.os-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--brand-info);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* Indicadores de Status (Bordas Laterais) */
+.os-card[style*="var(--status-patio)"] { border-left: 4px solid #64748b !important; }
+.os-card[style*="var(--status-orcamento)"] { border-left: 4px solid var(--brand-info) !important; }
+.os-card[style*="var(--status-aprovacao)"] { border-left: 4px solid var(--brand-warning) !important; }
+.os-card[style*="var(--status-box)"] { border-left: 4px solid #8b5cf6 !important; }
+.os-card[style*="var(--status-pronto)"] { border-left: 4px solid var(--brand-success) !important; }
+
+/* ==========================================================================
+   4. TABELAS E COMPONENTES DE UI
+   ========================================================================== */
+.table {
+    --bs-table-bg: var(--bg-card);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.02);
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+.bg-card { background-color: var(--bg-card) !important; }
+.bg-black { background-color: var(--bg-black) !important; }
+.bg-darker { background-color: var(--bg-darker) !important; }
+.border-secondary { border-color: var(--border-color) !important; }
+
+/* Scrollbars Modernas */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surf-0);
+    background: var(--bg-darker);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--surf-3);
-  border-radius: 10px;
+    background: var(--border-light);
+    border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hi);
-}
-
-/* Scrollbar invisível no Kanban para não atrapalhar no Celular */
-.kanban::-webkit-scrollbar {
-  height: 4px;
-}
-
-.m-tabs::-webkit-scrollbar {
-  height: 0px; /* Esconde rolagem visual das abas nos modais */
+    background: var(--text-muted);
 }
 
 /* ==========================================================================
-   AJUSTES FINOS VISUAIS PARA ELEMENTOS NATIVOS
+   5. MODAIS (PRONTUÁRIO)
    ========================================================================== */
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator,
-input[type="month"]::-webkit-calendar-picker-indicator {
-  filter: invert(1); /* Faz o ícone do calendário ficar branco no modo escuro */
-  cursor: pointer;
-  opacity: 0.6;
+.modal-content {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator:hover,
-input[type="time"]::-webkit-calendar-picker-indicator:hover,
-input[type="month"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
+.modal-header {
+    background-color: var(--bg-black);
+    border-bottom: 1px solid var(--border-color);
 }
 
-/* Prevenção de Autofill (Evita que o navegador deixe o input com fundo branco) */
-input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
-input:-webkit-autofill:active{
-    -webkit-box-shadow: 0 0 0 30px var(--surf-2) inset !important;
-    -webkit-text-fill-color: var(--text-primary) !important;
-    transition: background-color 5000s ease-in-out 0s;
+.form-control, .form-select {
+    background-color: var(--bg-black) !important;
+    border: 1px solid var(--border-color) !important;
+    color: white !important;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--brand-info) !important;
+    box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.25) !important;
+}
+
+/* Abas (Tabs) */
+.nav-tabs .nav-link {
+    color: var(--text-muted);
+    border: none;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent !important;
+    color: var(--brand-info) !important;
+    border-bottom: 3px solid var(--brand-info) !important;
+}
+
+/* ==========================================================================
+   6. ANIMAÇÕES (LEDS DE ATENÇÃO)
+   ========================================================================== */
+.attention-box {
+    border-radius: 8px;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* ==========================================================================
+   7. RESPONSIVIDADE
+   ========================================================================== */
+@media (max-width: 991px) {
+    .sidebar {
+        position: fixed;
+        left: -260px;
+        height: 100%;
+    }
+    .sidebar.show {
+        left: 0;
+    }
 }
