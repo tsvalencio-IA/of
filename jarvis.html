@@ -1,1334 +1,319 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-bs-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>JARVIS ERP — Painel</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/design.css">
-<style>
-/* ═══════════════════════════════════════════
-   LAYOUT SHELL
-═══════════════════════════════════════════ */
-html,body{height:100%;overflow:hidden;}
-.app-shell{display:flex;height:100dvh;position:relative;z-index:1;}
-
-/* ═══════════════════════════════════════════
-   SIDEBAR
-═══════════════════════════════════════════ */
-.sidebar{
-  width:240px;background:var(--surf-0);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;
-  transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:60;
-}
-@media(max-width:767px){
-  .sidebar{position:fixed;inset:0 auto 0 0;width:280px;transform:translateX(-100%);box-shadow:0 0 60px rgba(0,0,0,.7);}
-  .sidebar.open{transform:translateX(0);}
-  .sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:59;backdrop-filter:blur(2px);}
-  .sb-backdrop.show{display:block;}
-}
-.sb-brand{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;min-height:58px;}
-.sb-mark{width:32px;height:32px;border-radius:var(--r-md);background:var(--brand-dim);border:1px solid rgba(59,130,246,.25);display:flex;align-items:center;justify-content:center;font-family:var(--ff-display);font-size:.95rem;font-weight:800;color:var(--brand);flex-shrink:0;}
-.sb-name{font-family:var(--ff-display);font-size:.85rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.sb-tag{font-family:var(--ff-mono);font-size:.52rem;color:var(--brand);letter-spacing:.08em;text-transform:uppercase;}
-.sb-nav{flex:1;overflow-y:auto;padding:8px;}
-.nav-sec{font-family:var(--ff-mono);font-size:.5rem;color:var(--text-disabled);letter-spacing:.14em;text-transform:uppercase;padding:10px 8px 4px;}
-.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r-md);cursor:pointer;color:var(--text-secondary);font-size:.82rem;font-weight:500;transition:all .12s;border-left:2px solid transparent;margin-bottom:1px;user-select:none;-webkit-tap-highlight-color:transparent;}
-.nav-item:hover{background:var(--surf-2);color:var(--text-primary);}
-.nav-item.active{background:var(--brand-dim);color:var(--brand);border-left-color:var(--brand);}
-.nav-icon{font-size:.95rem;width:17px;text-align:center;flex-shrink:0;}
-.nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-family:var(--ff-mono);font-size:.52rem;padding:1px 6px;border-radius:10px;display:none;}
-.nav-badge.show{display:block;}
-.sb-foot{padding:12px;border-top:1px solid var(--border);}
-.sb-user-row{display:flex;align-items:center;gap:9px;padding:9px;background:var(--surf-1);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:9px;}
-.sb-av{width:30px;height:30px;border-radius:var(--r-md);background:var(--brand-dim);border:1px solid rgba(59,130,246,.2);display:flex;align-items:center;justify-content:center;font-family:var(--ff-display);font-size:.85rem;font-weight:700;color:var(--brand);flex-shrink:0;}
-.sb-uname{font-size:.78rem;font-weight:600;color:var(--text-primary);}
-.sb-urole{font-family:var(--ff-mono);font-size:.5rem;color:var(--brand);letter-spacing:.08em;text-transform:uppercase;}
-.btn-out{width:100%;padding:8px;background:transparent;border:1px solid rgba(244,63,94,.2);border-radius:var(--r-md);color:rgba(244,63,94,.6);font-family:var(--ff-mono);font-size:.62rem;letter-spacing:.08em;cursor:pointer;transition:all .12s;min-height:34px;}
-.btn-out:hover{background:rgba(244,63,94,.08);color:var(--danger);border-color:rgba(244,63,94,.4);}
-
-/* ═══════════════════════════════════════════
-   MAIN
-═══════════════════════════════════════════ */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
-
-/* TOPBAR */
-.topbar{height:54px;padding:0 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surf-0);flex-shrink:0;}
-.ham{display:none;background:none;border:1px solid var(--border);border-radius:var(--r-md);width:34px;height:34px;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:1rem;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
-@media(max-width:767px){.ham{display:flex;}}
-.topbar-title{font-family:var(--ff-display);font-size:.95rem;font-weight:700;color:var(--text-primary);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-#buscaWrap{position:relative;flex:1;max-width:250px;}
-#buscaInput{width:100%;height:32px;padding:0 11px;background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text-primary);font-family:var(--ff-body);font-size:.8rem;outline:none;transition:border-color .12s;}
-#buscaInput:focus{border-color:var(--brand);}
-#buscaInput::placeholder{color:var(--text-muted);font-size:.74rem;}
-#buscaResults{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surf-1);border:1px solid var(--border-med);border-radius:var(--r-lg);box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:200;max-height:280px;overflow-y:auto;}
-.busca-item{padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s;}
-.busca-item:last-child{border-bottom:none;}
-.busca-item:hover{background:var(--surf-2);}
-.busca-placa{font-family:var(--ff-mono);font-weight:700;font-size:.8rem;letter-spacing:.06em;}
-.busca-info{font-size:.7rem;color:var(--text-secondary);margin-top:2px;}
-.tb-chips{display:flex;align-items:center;gap:7px;margin-left:auto;}
-.tb-chip{display:flex;align-items:center;gap:5px;padding:3px 9px;background:var(--surf-1);border:1px solid var(--border);border-radius:100px;font-family:var(--ff-mono);font-size:.56rem;color:var(--text-secondary);white-space:nowrap;}
-.live-dot{width:5px;height:5px;border-radius:50%;background:var(--success);box-shadow:0 0 5px var(--success);animation:blink 2s infinite;}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:.35;}}
-#alertLed{width:7px;height:7px;border-radius:50%;background:var(--danger);box-shadow:0 0 7px var(--danger);animation:blink 1s infinite;display:none;}
-@media(max-width:480px){#buscaWrap{max-width:130px;}.tb-chip{display:none;}}
-
-/* PAINEL ATENÇÃO */
-.painel-wrap{background:var(--surf-0);border-bottom:1px solid var(--border);padding:9px 16px;}
-.painel-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
-@media(max-width:480px){.painel-grid{grid-template-columns:1fr;}}
-.painel-box{border:1px solid;border-radius:var(--r-lg);padding:7px 11px;min-height:48px;}
-.painel-lbl{font-family:var(--ff-mono);font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;}
-.painel-lista{display:flex;flex-wrap:wrap;gap:5px;}
-.painel-item{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--surf-2);border:1px solid var(--border);border-radius:100px;cursor:pointer;transition:background .12s;font-size:.7rem;-webkit-tap-highlight-color:transparent;}
-.painel-item:hover{background:var(--surf-3);}
-.painel-placa{font-family:var(--ff-mono);font-weight:700;font-size:.7rem;letter-spacing:.06em;}
-
-/* CONTENT */
-.content{flex:1;overflow-y:auto;padding:18px 16px;-webkit-overflow-scrolling:touch;}
-@media(max-width:767px){.content{padding:14px 12px 76px;}}
-.section{display:none;}
-.section.active{display:block;animation:fade-in .18s ease;}
-@keyframes fade-in{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
-
-/* BOTTOM NAV */
-.bottom-nav{display:none;}
-@media(max-width:767px){
-  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surf-0);border-top:1px solid var(--border);z-index:55;padding:4px 0 env(safe-area-inset-bottom,4px);}
-  .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px;cursor:pointer;color:var(--text-muted);font-family:var(--ff-mono);font-size:.5rem;gap:3px;transition:color .12s;position:relative;-webkit-tap-highlight-color:transparent;}
-  .bn-item.active{color:var(--brand);}
-  .bn-icon{font-size:1.05rem;line-height:1;}
-  .bn-badge{position:absolute;top:5px;right:calc(50% - 13px);background:var(--danger);color:#fff;font-size:.48rem;padding:1px 4px;border-radius:8px;display:none;}
-  .bn-badge.show{display:block;}
-}
-
-/* KPI */
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:16px;}
-@media(max-width:1024px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:480px){.kpi-grid{gap:8px;}}
-.kpi{background:var(--surf-1);border:1px solid var(--border);border-radius:var(--r-xl);padding:15px;position:relative;overflow:hidden;transition:all .12s;}
-.kpi:hover{border-color:var(--border-med);transform:translateY(-1px);}
-.kpi-accent{position:absolute;top:0;left:14px;right:14px;height:2px;border-radius:0 0 4px 4px;}
-.kpi-lbl{font-family:var(--ff-mono);font-size:.56rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;}
-.kpi-val{font-family:var(--ff-display);font-size:1.65rem;font-weight:800;line-height:1;margin-bottom:3px;letter-spacing:-.02em;}
-.kpi-sub{font-family:var(--ff-mono);font-size:.56rem;color:var(--text-secondary);}
-.kpi-icon{position:absolute;right:12px;bottom:10px;font-size:2rem;opacity:.06;}
-@media(max-width:480px){.kpi-val{font-size:1.3rem;}.kpi-lbl{font-size:.5rem;}}
-
-/* CARDS */
-.card{background:var(--surf-1);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;margin-bottom:13px;transition:border-color .12s;}
-.card:hover{border-color:var(--border-med);}
-.card-hd{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-.card-title{font-family:var(--ff-display);font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:7px;}
-.card-body{padding:15px;}
-.card-flush{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
-.grid21{display:grid;grid-template-columns:1fr 320px;gap:13px;}
-@media(max-width:900px){.grid2,.grid21{grid-template-columns:1fr;}}
-
-/* TABLE */
-.tbl{width:100%;border-collapse:collapse;font-size:.8rem;min-width:380px;}
-.tbl th{padding:9px 13px;text-align:left;font-family:var(--ff-mono);font-size:.56rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surf-2);white-space:nowrap;}
-.tbl td{padding:10px 13px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;color:var(--text-primary);}
-.tbl tr:last-child td{border-bottom:none;}
-.tbl tbody tr:hover td{background:rgba(255,255,255,.02);}
-.tbl-empty{text-align:center;padding:28px;color:var(--text-muted);font-size:.78rem;}
-.row-crit td{background:rgba(244,63,94,.04)!important;}
-.row-crit td:first-child{border-left:2px solid var(--danger);}
-@media(max-width:767px){.tbl{font-size:.74rem;}.tbl th,.tbl td{padding:8px 9px;}}
-
-/* KANBAN */
-.kanban{display:flex;gap:11px;overflow-x:auto;padding-bottom:8px;align-items:flex-start;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;}
-.k-col{background:var(--surf-1);border:1px solid var(--border);border-radius:var(--r-xl);min-width:255px;width:255px;display:flex;flex-direction:column;max-height:calc(100dvh - 250px);flex-shrink:0;scroll-snap-align:start;}
-@media(max-width:767px){.k-col{min-width:82vw;width:82vw;max-height:calc(100dvh - 290px);}}
-.k-head{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.k-lbl{font-family:var(--ff-mono);font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
-.k-cnt{font-family:var(--ff-mono);font-size:.6rem;color:var(--text-muted);padding:2px 7px;border:1px solid var(--border);border-radius:10px;}
-.k-body{overflow-y:auto;padding:7px;flex:1;display:flex;flex-direction:column;gap:6px;}
-.k-card{background:var(--surf-2);border:1px solid var(--border);border-left:3px solid;border-radius:var(--r-lg);padding:11px 12px;cursor:pointer;transition:all .12s;position:relative;-webkit-tap-highlight-color:transparent;}
-.k-card:hover{background:var(--surf-3);transform:translateY(-1px);}
-.k-card:active{transform:scale(.98);}
-.k-placa{font-family:var(--ff-mono);font-size:.88rem;font-weight:700;letter-spacing:.07em;margin-bottom:3px;}
-.k-cli{font-size:.74rem;color:var(--text-secondary);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.k-desc{font-size:.68rem;color:var(--text-muted);margin-bottom:7px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;}
-.k-foot{display:flex;align-items:center;justify-content:space-between;}
-.k-tipo{font-family:var(--ff-mono);font-size:.5rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:100px;}
-.k-tipo.carro{background:rgba(59,130,246,.12);color:var(--brand);}
-.k-tipo.moto{background:rgba(245,158,11,.12);color:var(--warn);}
-.k-tipo.bicicleta{background:rgba(34,211,160,.12);color:var(--success);}
-.k-date{font-family:var(--ff-mono);font-size:.56rem;color:var(--text-muted);}
-/* move buttons */
-.k-moves{position:absolute;top:7px;right:7px;display:flex;gap:3px;}
-.k-btn{background:var(--surf-0);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent;}
-.k-btn:hover{background:var(--surf-2);color:var(--brand);}
-/* priority */
-.prio-dot{width:6px;height:6px;border-radius:50%;position:absolute;top:7px;right:7px;}
-.prio-dot.vermelho{background:var(--danger);box-shadow:0 0 5px var(--danger);animation:blink 1s infinite;}
-.prio-dot.amarelo{background:var(--warn);}
-
-/* FORM */
-.fg{margin-bottom:13px;}
-.lbl{display:block;font-family:var(--ff-mono);font-size:.56rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
-.inp,.sel,.ta{width:100%;background:var(--surf-2);border:1px solid var(--border-med);border-radius:var(--r-md);color:var(--text-primary);font-family:var(--ff-body);font-size:.85rem;padding:9px 12px;outline:none;transition:all .12s;-webkit-appearance:none;appearance:none;}
-.inp:focus,.sel:focus,.ta:focus{border-color:var(--brand);background:rgba(59,130,246,.04);box-shadow:0 0 0 3px var(--brand-dim);}
-.inp::placeholder,.ta::placeholder{color:var(--text-muted);font-size:.8rem;}
-.sel option{background:var(--surf-2);}
-.ta{resize:vertical;min-height:76px;line-height:1.6;}
-.mono{font-family:var(--ff-mono);letter-spacing:.04em;}
-@media(max-width:767px){.inp,.sel,.ta{font-size:16px;padding:11px 13px;}}
-.fr{display:grid;gap:11px;}
-.fr2{grid-template-columns:1fr 1fr;}
-.fr3{grid-template-columns:1fr 1fr 1fr;}
-.fr4{grid-template-columns:1fr 1fr 1fr 1fr;}
-@media(max-width:600px){.fr2,.fr3,.fr4{grid-template-columns:1fr;}}
-@media(min-width:601px) and (max-width:767px){.fr3,.fr4{grid-template-columns:1fr 1fr;}}
-/* peca / nf rows */
-.peca-row,.nf-row{display:grid;grid-template-columns:1fr 65px 80px 80px 30px;gap:6px;align-items:center;}
-@media(max-width:600px){.peca-row,.nf-row{grid-template-columns:1fr 52px 66px 26px;}.peca-custo{display:none;}}
-
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 15px;border-radius:var(--r-md);border:none;font-family:var(--ff-body);font-size:.82rem;font-weight:600;cursor:pointer;transition:all .12s;white-space:nowrap;user-select:none;-webkit-tap-highlight-color:transparent;min-height:34px;}
-.btn:disabled{opacity:.4;cursor:not-allowed;}
-.btn:active:not(:disabled){transform:scale(.97);}
-.btn-brand  {background:var(--brand);color:#fff;}
-.btn-brand:hover:not(:disabled){background:var(--brand-dark);box-shadow:0 4px 12px var(--brand-glow);}
-.btn-ghost  {background:transparent;border:1px solid var(--border-med);color:var(--text-secondary);}
-.btn-ghost:hover:not(:disabled){background:var(--surf-2);color:var(--text-primary);border-color:var(--border-hi);}
-.btn-danger {background:transparent;border:1px solid rgba(244,63,94,.25);color:var(--danger);}
-.btn-danger:hover:not(:disabled){background:rgba(244,63,94,.08);}
-.btn-success{background:transparent;border:1px solid rgba(34,211,160,.25);color:var(--success);}
-.btn-success:hover:not(:disabled){background:rgba(34,211,160,.08);}
-.btn-warn   {background:transparent;border:1px solid rgba(245,158,11,.25);color:var(--warn);}
-.btn-warn:hover:not(:disabled){background:rgba(245,158,11,.08);}
-.btn-sm{padding:5px 11px;font-size:.76rem;min-height:30px;}
-.btn-icon{padding:7px;width:32px;height:32px;}
-.btn-full{width:100%;justify-content:center;}
-.divider{height:1px;background:var(--border);margin:13px 0;}
-
-/* BADGES */
-.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-family:var(--ff-mono);font-size:.56rem;letter-spacing:.06em;font-weight:500;white-space:nowrap;}
-.b-brand   {background:var(--brand-dim);color:var(--brand);}
-.b-success {background:rgba(34,211,160,.1);color:var(--success);}
-.b-warn    {background:rgba(245,158,11,.1);color:var(--warn);}
-.b-danger  {background:rgba(244,63,94,.1);color:var(--danger);}
-.b-neutral {background:var(--surf-3);color:var(--text-secondary);}
-.placa{font-family:var(--ff-mono);font-size:.78rem;font-weight:700;letter-spacing:.1em;padding:2px 9px;background:var(--surf-3);border:1px solid var(--border-med);border-radius:4px;}
-
-/* MODAIS */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:18px;backdrop-filter:blur(6px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
-.overlay.open{display:flex;}
-.modal{background:var(--surf-1);border:1px solid var(--border-med);border-radius:var(--r-2xl);width:100%;margin:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.7);animation:modal-in .2s cubic-bezier(.34,1.2,.64,1);}
-@media(max-width:767px){
-  .overlay{padding:0;align-items:flex-end;}
-  .modal{border-radius:var(--r-2xl) var(--r-2xl) 0 0;max-height:93dvh;overflow-y:auto;margin:0;}
-  .m-sm,.m-md,.m-lg,.m-xl{max-width:100%;}
-}
-.m-sm{max-width:460px;}.m-md{max-width:620px;}.m-lg{max-width:840px;}.m-xl{max-width:1040px;}
-.m-hd{padding:16px 19px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surf-1);z-index:10;border-radius:var(--r-2xl) var(--r-2xl) 0 0;}
-.m-title{font-family:var(--ff-display);font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:9px;}
-.m-close{background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text-muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .12s;flex-shrink:0;}
-.m-close:hover{background:rgba(244,63,94,.1);color:var(--danger);}
-.m-tabs{display:flex;padding:0 19px;border-bottom:1px solid var(--border);background:var(--surf-2);overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.mtab{padding:10px 15px;font-family:var(--ff-mono);font-size:.6rem;letter-spacing:.08em;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s;text-transform:uppercase;white-space:nowrap;}
-.mtab:hover{color:var(--text-primary);}
-.mtab.active{color:var(--brand);border-bottom-color:var(--brand);}
-.tab-pane{display:none;padding:16px 19px;}
-.tab-pane.active{display:block;}
-.m-body{padding:19px;}
-.m-foot{padding:13px 19px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surf-1);border-radius:0 0 var(--r-2xl) var(--r-2xl);}
-@media(max-width:767px){.m-foot .btn{flex:1;justify-content:center;}.m-foot{padding:11px 15px;}}
-
-/* TOAST */
-#toastBox{position:fixed;top:14px;right:14px;z-index:9999;display:flex;flex-direction:column;gap:7px;pointer-events:none;max-width:330px;}
-@media(max-width:480px){#toastBox{top:auto;bottom:78px;left:10px;right:10px;max-width:none;}}
-.toast-j{padding:10px 14px;border-radius:var(--r-lg);display:flex;align-items:center;gap:9px;border:1px solid;background:var(--surf-1);box-shadow:0 4px 16px rgba(0,0,0,.5);animation:t-in .2s ease;pointer-events:all;font-size:.78rem;}
-@keyframes t-in{from{opacity:0;transform:translateX(18px);}to{opacity:1;transform:none;}}
-.toast-j.ok  {border-color:rgba(34,211,160,.3);}
-.toast-j.err {border-color:rgba(244,63,94,.3);}
-.toast-j.warn{border-color:rgba(245,158,11,.3);}
-.toast-j.info{border-color:rgba(96,165,250,.3);}
-
-/* TIMELINE */
-.tl-item{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);}
-.tl-item:last-child{border-bottom:none;}
-.tl-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.82rem;flex-shrink:0;background:var(--surf-3);margin-top:2px;}
-.tl-body{flex:1;min-width:0;position:relative;}
-.tl-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:3px;}
-.tl-user{font-weight:700;font-size:.8rem;}
-.tl-date{font-family:var(--ff-mono);font-size:.58rem;color:var(--text-muted);}
-.tl-action{font-size:.8rem;color:var(--text-primary);line-height:1.5;}
-.tl-del{position:absolute;top:0;right:0;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:10px;padding:2px 4px;border-radius:3px;opacity:0;transition:opacity .12s;}
-.tl-body:hover .tl-del{opacity:1;}
-.tl-del:hover{color:var(--danger);background:rgba(244,63,94,.1);}
-
-/* MEDIA */
-.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:7px;}
-.media-item{aspect-ratio:1;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border);position:relative;background:var(--surf-2);cursor:pointer;}
-.media-item img,.media-item video{width:100%;height:100%;object-fit:cover;display:block;}
-.media-item:hover .media-del{opacity:1;}
-.media-del{position:absolute;top:3px;right:3px;background:rgba(244,63,94,.85);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;}
-.upload-btns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px;}
-.upload-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px;background:var(--surf-3);border:1px solid var(--border);border-radius:var(--r-md);cursor:pointer;font-size:.8rem;font-weight:600;color:var(--text-secondary);transition:all .12s;min-height:46px;-webkit-tap-highlight-color:transparent;}
-.upload-btn:hover{background:var(--surf-2);color:var(--text-primary);}
-
-/* LIGHTBOX */
-#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:14px;}
-#lb-inner{position:relative;max-width:92vw;max-height:90dvh;display:flex;flex-direction:column;align-items:center;}
-#lb-content{max-width:100%;max-height:80dvh;display:flex;align-items:center;justify-content:center;}
-#lb-content img,#lb-content video{max-width:100%;max-height:80dvh;border-radius:var(--r-lg);object-fit:contain;}
-.lb-close{position:absolute;top:-11px;right:-11px;background:var(--surf-1);border:1px solid var(--border-med);border-radius:50%;width:30px;height:30px;color:var(--text-primary);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.1);border:none;border-radius:50%;width:42px;height:42px;color:#fff;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
-#lb-prev{left:-52px;}#lb-next{right:-52px;}
-.lb-actions{display:flex;gap:9px;margin-top:11px;}
-.lb-btn{background:var(--surf-1);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text-secondary);padding:7px 13px;font-size:.76rem;cursor:pointer;display:flex;align-items:center;gap:6px;}
-
-/* DRE */
-.dre-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:16px;}
-@media(max-width:600px){.dre-grid{grid-template-columns:1fr;}}
-.dre-card{background:var(--surf-1);border:1px solid var(--border);border-radius:var(--r-xl);padding:15px;text-align:center;}
-.dre-lbl{font-family:var(--ff-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;}
-.dre-val{font-family:var(--ff-display);font-size:1.45rem;font-weight:800;letter-spacing:-.02em;}
-.dre-card.ent .dre-val{color:var(--success);}
-.dre-card.sai .dre-val{color:var(--danger);}
-.dre-card.sal .dre-val{color:var(--brand);}
-
-/* COMISSÕES */
-.com-card{background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px 15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
-.com-name{font-size:.85rem;font-weight:600;}
-.com-lbl{font-family:var(--ff-mono);font-size:.56rem;color:var(--text-muted);}
-.com-val{font-family:var(--ff-display);font-size:1.15rem;font-weight:800;color:var(--success);}
-
-/* CHAT */
-.chat-layout{display:grid;grid-template-columns:230px 1fr;gap:11px;height:calc(100dvh - 190px);}
-@media(max-width:767px){.chat-layout{grid-template-columns:1fr;height:auto;}}
-.chat-list{background:var(--surf-1);border:1px solid var(--border);border-radius:var(--r-xl);overflow-y:auto;}
-.chat-item{padding:11px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
-.chat-item:hover,.chat-item.active{background:var(--brand-dim);}
-.chat-item-name{font-size:.82rem;font-weight:600;margin-bottom:2px;}
-.chat-item-last{font-size:.68rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.chat-unread{float:right;background:var(--danger);color:#fff;font-family:var(--ff-mono);font-size:.52rem;padding:2px 6px;border-radius:10px;}
-.chat-main{background:var(--surf-1);border:1px solid var(--border);border-radius:var(--r-xl);display:flex;flex-direction:column;overflow:hidden;}
-.chat-hd{padding:12px 15px;border-bottom:1px solid var(--border);font-family:var(--ff-display);font-size:.9rem;font-weight:700;}
-.chat-msgs{flex:1;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:8px;min-height:200px;max-height:400px;}
-.chat-msg{max-width:70%;padding:9px 13px;border-radius:var(--r-lg);font-size:.8rem;line-height:1.5;}
-.chat-msg.admin {background:var(--brand-dim);border:1px solid rgba(59,130,246,.2);align-self:flex-end;}
-.chat-msg.cliente{background:var(--surf-2);border:1px solid var(--border);align-self:flex-start;}
-.chat-ts{font-family:var(--ff-mono);font-size:.56rem;color:var(--text-muted);margin-top:3px;text-align:right;}
-.chat-foot{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;}
-
-/* IA */
-.ia-box{background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-xl);display:flex;flex-direction:column;height:clamp(280px,52vh,500px);}
-.ia-msgs{flex:1;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:11px;}
-.ia-msg{padding:10px 13px;border-radius:var(--r-lg);max-width:84%;font-size:.82rem;line-height:1.6;}
-.ia-msg.user{background:var(--surf-3);border:1px solid var(--border);align-self:flex-end;font-family:var(--ff-mono);font-size:.78rem;}
-.ia-msg.bot {background:var(--brand-dim);border:1px solid rgba(59,130,246,.2);align-self:flex-start;}
-.ia-msg.bot strong{color:var(--brand);}
-.ia-inp{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;}
-
-/* PRIORIDADE */
-.prio-sel{display:flex;gap:7px;}
-.prio-opt{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border:2px solid var(--border);border-radius:var(--r-md);cursor:pointer;font-size:.76rem;font-weight:600;transition:all .12s;user-select:none;}
-.prio-opt input{display:none;}
-.prio-opt:has(input:checked)[data-prio="verde"]   {border-color:var(--success);background:rgba(34,211,160,.08);color:var(--success);}
-.prio-opt:has(input:checked)[data-prio="amarelo"] {border-color:var(--warn);background:rgba(245,158,11,.08);color:var(--warn);}
-.prio-opt:has(input:checked)[data-prio="vermelho"]{border-color:var(--danger);background:rgba(244,63,94,.08);color:var(--danger);}
-
-/* LOG RÁPIDO */
-.log-quick{background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px;margin-top:11px;}
-.log-quick-title{font-family:var(--ff-display);font-size:.85rem;font-weight:700;margin-bottom:11px;}
-#postLogActions{background:var(--surf-2);border:1px solid var(--border-med);border-radius:var(--r-lg);padding:13px;margin-top:9px;display:none;}
-
-/* MISC */
-.spinner{width:17px;height:17px;border:2px solid var(--border-med);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.empty-state{text-align:center;padding:36px 18px;color:var(--text-muted);}
-.empty-icon{font-size:2rem;margin-bottom:9px;opacity:.45;}
-.empty-title{font-family:var(--ff-display);font-size:.88rem;font-weight:700;color:var(--text-secondary);margin-bottom:4px;}
-.hidden{display:none!important;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Master - Gestão Automotiva</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/design.css"> <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
-<body>
-<div id="toastBox"></div>
-<div class="sb-backdrop" id="sbBackdrop" onclick="closeSB()"></div>
+<body class="bg-darker text-light overflow-hidden">
 
-<div class="app-shell">
+    <audio id="audio-notifica-chat" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+    <audio id="audio-notifica-os" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
-<!-- ══════════════ SIDEBAR ══════════════ -->
-<aside class="sidebar" id="sidebar">
-  <div class="sb-brand">
-    <div class="sb-mark brand-logo-mark">J</div>
-    <div style="flex:1;min-width:0">
-      <div class="sb-name brand-name">JARVIS ERP</div>
-      <div class="sb-tag" id="sbTenantNome">Carregando...</div>
+    <div class="d-flex h-100 w-100">
+        <nav class="sidebar bg-card border-end border-secondary d-flex flex-column" id="sidebar" style="width: 260px; transition: 0.3s; z-index: 1040;">
+            <div class="p-4 border-bottom border-secondary text-center">
+                <i class="bi bi-car-front-fill fs-2 text-info"></i>
+                <h5 class="mt-2 fw-bold text-white mb-0" id="lbl-empresa-nome">Carregando...</h5>
+                <span class="badge bg-dark border border-secondary text-info text-uppercase" style="font-size: 0.65rem;">ERP Master</span>
+            </div>
+            
+            <div class="flex-grow-1 overflow-y-auto p-2 mt-2" id="menu-lateral">
+                <button class="nav-btn active" onclick="ui.irSecao('sec-os', this)"><i class="bi bi-kanban"></i> Pátio / Kanban</button>
+                <button class="nav-btn" onclick="ui.irSecao('sec-clientes', this)"><i class="bi bi-people"></i> CRM / Clientes</button>
+                
+                <button class="nav-btn d-flex justify-content-between align-items-center" onclick="ui.irSecao('sec-chat', this)">
+                    <span><i class="bi bi-chat-dots"></i> Chat SAC</span>
+                    <span class="badge bg-danger rounded-pill d-none" id="badge-chat-global">0</span>
+                </button>
+
+                <button class="nav-btn gestao-only" onclick="ui.irSecao('sec-estoque', this)"><i class="bi bi-box-seam"></i> Estoque (XML)</button>
+                <button class="nav-btn gestao-only text-success" onclick="ui.irSecao('sec-financeiro', this)"><i class="bi bi-bank"></i> Financeiro / DRE</button>
+                <button class="nav-btn admin-only" onclick="ui.irSecao('sec-equipe', this)"><i class="bi bi-person-badge"></i> Equipe / RH</button>
+                <button class="nav-btn text-warning" onclick="ui.irSecao('sec-arquivo', this)"><i class="bi bi-archive"></i> Arquivo Morto</button>
+                <button class="nav-btn text-info" onclick="ui.irSecao('sec-ia', this)"><i class="bi bi-robot"></i> Consultor I.A.</button>
+            </div>
+
+            <div class="p-3 border-top border-secondary bg-black mt-auto text-center">
+                <small class="text-white-50 d-block mb-1">Logado como: <strong class="text-info" id="lbl-usuario-nome">Usuário</strong></small>
+                <button class="btn btn-outline-danger w-100 btn-sm fw-bold" onclick="core.sair()"><i class="bi bi-power"></i> Encerrar Sessão</button>
+            </div>
+        </nav>
+
+        <main class="flex-grow-1 d-flex flex-column h-100" style="min-width: 0;">
+            
+            <header class="topbar bg-card border-bottom border-secondary p-3 d-flex justify-content-between align-items-center shadow-sm" style="z-index: 1030;">
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-dark border-secondary me-3 d-lg-none" onclick="ui.toggleSidebar()"><i class="bi bi-list"></i></button>
+                    <h4 class="mb-0 fw-bold text-white" id="titulo-pagina">Pátio Ativo</h4>
+                </div>
+                
+                <div class="d-flex align-items-center gap-3">
+                    <div class="input-group d-none d-md-flex" style="width: 300px;">
+                        <span class="input-group-text bg-dark border-secondary text-info"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" id="busca-global" placeholder="Buscar placa, cliente..." onkeyup="ui.filtrarGlobal()">
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-dark border-secondary position-relative" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell-fill text-warning"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="badge-alertas-os">0</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow-lg border-secondary" id="lista-alertas-dropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                            <li><h6 class="dropdown-header text-warning fw-bold">Alertas do Pátio</h6></li>
+                            <li><hr class="dropdown-divider border-secondary"></li>
+                            <div id="conteudo-alertas-os"><li class="dropdown-item text-white-50 text-center small">Tudo tranquilo por enquanto.</li></div>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <div id="painel-atencao" class="w-100 px-4 pt-3 pb-0 d-none">
+                </div>
+
+            <div class="flex-grow-1 overflow-y-auto p-4 d-flex flex-column" id="area-telas">
+                
+                <section id="sec-os" class="secao-tela h-100 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-white-50 mb-0">Arraste os cartões ou clique para atualizar o status do veículo.</p>
+                        <button class="btn btn-info fw-bold shadow gestao-only" onclick="os.abrirModalOS()"><i class="bi bi-plus-lg"></i> Nova Recepção</button>
+                    </div>
+                    
+                    <div class="kanban-container d-flex gap-3 flex-grow-1 overflow-x-auto pb-2" style="scroll-behavior: smooth; min-height: 500px;">
+                        
+                        <div class="kanban-col bg-card bg-opacity-50 border border-secondary border-dashed rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
+                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-cone-striped text-warning me-2"></i> 1. Recepção/Fila <span class="badge bg-secondary float-end" id="count-patio">0</span></h6>
+                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-patio"></div>
+                        </div>
+
+                        <div class="kanban-col bg-card bg-opacity-50 border border-secondary border-dashed rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
+                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-file-earmark-text text-primary me-2"></i> 2. Orçamento (A Enviar) <span class="badge bg-secondary float-end" id="count-orcamento">0</span></h6>
+                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-orcamento"></div>
+                        </div>
+
+                        <div class="kanban-col bg-card bg-opacity-50 border border-secondary border-dashed rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
+                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-hourglass-split text-danger me-2"></i> 3. Aguard. Cliente <span class="badge bg-secondary float-end" id="count-aprovacao">0</span></h6>
+                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-aprovacao"></div>
+                        </div>
+
+                        <div class="kanban-col bg-card bg-opacity-50 border border-secondary border-dashed rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
+                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-tools text-info me-2"></i> 4. Em Execução (Box) <span class="badge bg-secondary float-end" id="count-box">0</span></h6>
+                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-box"></div>
+                        </div>
+
+                        <div class="kanban-col bg-card bg-opacity-50 border border-secondary border-dashed rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
+                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> 5. Pronto / Lavagem <span class="badge bg-secondary float-end" id="count-pronto">0</span></h6>
+                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-pronto"></div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <section id="sec-clientes" class="secao-tela d-none">
+                    <div class="d-flex justify-content-between mb-4">
+                        <p class="text-white-50">Gestão da base de clientes e acessos ao Portal Web.</p>
+                        <button class="btn btn-info fw-bold gestao-only" onclick="clientes.abrirModalCliente()"><i class="bi bi-person-plus"></i> Novo Cliente</button>
+                    </div>
+                    <div class="table-responsive bg-card rounded border border-secondary">
+                        <table class="table table-dark table-hover align-middle mb-0">
+                            <thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>Acesso Portal (Login)</th><th class="gestao-only text-end">Ações</th></tr></thead>
+                            <tbody id="tb-clientes-corpo"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="sec-chat" class="secao-tela d-none h-100">
+                    <h5 class="text-white">Chat Omnichannel (Carregando estrutura...)</h5>
+                </section>
+                
+                <section id="sec-estoque" class="secao-tela d-none">
+                    <h5 class="text-white">Estoque Inteligente via XML (Carregando estrutura...)</h5>
+                </section>
+
+                <section id="sec-financeiro" class="secao-tela d-none">
+                    <h5 class="text-white">Financeiro Elástico (Até 24x) (Carregando estrutura...)</h5>
+                </section>
+
+            </div>
+        </main>
     </div>
-  </div>
-  <nav class="sb-nav">
-    <div class="nav-sec">PRINCIPAL</div>
-    <div class="nav-item active" onclick="navTo('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</div>
-    <div class="nav-item" onclick="navTo('agenda',this)"><span class="nav-icon">📅</span>Agenda</div>
-    <div class="nav-item" onclick="navTo('kanban',this)"><span class="nav-icon">🔧</span>Pátio / O.S.</div>
-    <div class="nav-sec">GESTÃO</div>
-    <div class="nav-item" onclick="navTo('clientes',this)"><span class="nav-icon">👥</span>Clientes / Veículos</div>
-    <div class="nav-item" onclick="navTo('estoque',this)"><span class="nav-icon">📦</span>Estoque / NF</div>
-    <div class="nav-item" onclick="navTo('financeiro',this)"><span class="nav-icon">💰</span>Financeiro / DRE</div>
-    <div class="nav-item" onclick="navTo('equipe',this)"><span class="nav-icon">👷</span>Equipe / RH</div>
-    <div class="nav-sec">COMUNICAÇÃO</div>
-    <div class="nav-item" onclick="navTo('chat',this)">
-      <span class="nav-icon">💬</span>CRM Chat
-      <span class="nav-badge" id="chatBadge">0</span>
-    </div>
-    <div class="nav-sec">INTELIGÊNCIA</div>
-    <div class="nav-item" onclick="navTo('ia',this)"><span class="nav-icon">🤖</span>thIAguinho IA</div>
-    <div class="nav-item" onclick="navTo('auditoria',this)"><span class="nav-icon">🔒</span>Auditoria</div>
-  </nav>
-  <div class="sb-foot">
-    <div class="sb-user-row">
-      <div class="sb-av" id="sbAvatar">G</div>
-      <div style="flex:1;min-width:0">
-        <div class="sb-uname" id="sbUserNome">Carregando</div>
-        <div class="sb-urole" id="sbUserRole">ADMIN</div>
-      </div>
-    </div>
-    <button class="btn-out" onclick="sair()">⏻ Encerrar Sessão</button>
-  </div>
-</aside>
 
-<!-- ══════════════ MAIN ══════════════ -->
-<div class="main">
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <button class="ham" onclick="openSB()" aria-label="Menu">☰</button>
-    <div class="topbar-title" id="pageTitle">DASHBOARD</div>
-    <div id="buscaWrap">
-      <input class="inp" id="buscaInput" placeholder="🔍 Buscar placa..." oninput="buscaGlobal(this.value)" autocomplete="off">
-      <div id="buscaResults" class="hidden"></div>
-    </div>
-    <div class="tb-chips">
-      <div class="tb-chip"><div class="live-dot"></div>SYNC</div>
-      <div class="tb-chip" id="tbNicho">🚗</div>
-      <div id="alertLed" title="Veículos aguardando atenção"></div>
-    </div>
-  </div>
+    <div class="modal fade" id="modal-os" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content bg-dark border-info" style="border-width: 2px;">
+                <div class="modal-header bg-black border-secondary p-4 d-flex justify-content-between align-items-center">
+                    <h4 class="modal-title text-white fw-bold m-0"><i class="bi bi-clipboard-data text-info me-2"></i> Prontuário <span id="os-header-placa" class="text-warning"></span></h4>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-success fw-bold d-none shadow-sm" id="btn-exportar-pdf" onclick="pdf.gerarLaudo()"><i class="bi bi-file-pdf-fill"></i> Exportar Laudo</button>
+                        <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+                
+                <div class="modal-body p-0">
+                    <form id="form-os">
+                        <input type="hidden" id="os-id">
+                        
+                        <div class="bg-card p-4 border-bottom border-secondary">
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="text-info fw-bold small">Placa</label>
+                                    <input type="text" class="form-control bg-black text-white fw-bold text-uppercase border-secondary" id="os-placa" required placeholder="ABC-1234">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-white-50 fw-bold small">Veículo / Modelo</label>
+                                    <input type="text" class="form-control bg-black text-white border-secondary" id="os-veiculo" required>
+                                </div>
+                                <div class="col-md-6 position-relative">
+                                    <label class="text-white-50 fw-bold small d-flex justify-content-between">
+                                        <span>Cliente Responsável (Busca Automática)</span>
+                                        <a href="#" class="text-info text-decoration-none gestao-only" onclick="clientes.abrirCadastroRapido()"><i class="bi bi-plus-circle"></i> Cadastrar Novo</a>
+                                    </label>
+                                    <input type="text" class="form-control bg-black text-white border-secondary fw-bold" id="os-cliente-busca" list="lista-clientes-dl" placeholder="Digite o nome do cliente..." autocomplete="off" onchange="os.vincularClienteBusca()">
+                                    <datalist id="lista-clientes-dl"></datalist>
+                                    <input type="hidden" id="os-cliente-id">
+                                    
+                                    <div id="alerta-cliente-invalido" class="text-danger small mt-1 fw-bold d-none">
+                                        <i class="bi bi-exclamation-triangle"></i> Cliente não cadastrado no banco. Por favor, cadastre primeiro.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-  <!-- PAINEL ATENÇÃO -->
-  <div class="painel-wrap" id="painelWrap" style="display:none">
-    <div class="painel-grid" id="painelAtencao"></div>
-  </div>
+                        <ul class="nav nav-tabs border-secondary bg-black px-4 pt-3" role="tablist">
+                            <li class="nav-item" role="presentation"><button class="nav-link active rounded-top-3 fw-bold" data-bs-toggle="tab" data-bs-target="#tab-os-checklist" type="button"><i class="bi bi-ui-checks"></i> Entrada & Checklist</button></li>
+                            <li class="nav-item" role="presentation"><button class="nav-link rounded-top-3 fw-bold" data-bs-toggle="tab" data-bs-target="#tab-os-diagnostico" type="button"><i class="bi bi-tools"></i> Diagnóstico & Peças</button></li>
+                            <li class="nav-item" role="presentation"><button class="nav-link rounded-top-3 fw-bold" data-bs-toggle="tab" data-bs-target="#tab-os-fotos" type="button"><i class="bi bi-camera"></i> Evidências Físicas</button></li>
+                            <li class="nav-item" role="presentation"><button class="nav-link rounded-top-3 fw-bold" data-bs-toggle="tab" data-bs-target="#tab-os-auditoria" type="button"><i class="bi bi-shield-lock"></i> Timeline / Auditoria</button></li>
+                        </ul>
 
-  <!-- CONTENT -->
-  <div class="content">
+                        <div class="tab-content p-4">
+                            <div class="tab-pane fade show active" id="tab-os-checklist">
+                                <div class="mb-4">
+                                    <label class="text-warning fw-bold small">Queixa do Cliente (Motivo da entrada)</label>
+                                    <textarea class="form-control bg-black text-warning border-secondary" id="os-queixa" rows="3" placeholder="O que o cliente reclamou?"></textarea>
+                                </div>
+                                <div class="bg-black p-4 rounded border border-secondary">
+                                    <h6 class="text-white-50 border-bottom border-secondary pb-2 mb-3 small fw-bold">Checklist Antifraude (Status Atual do Veículo)</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chk-combustivel"><label class="form-check-label text-white">Luz Reserva Acesa</label></div></div>
+                                        <div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input border-warning" type="checkbox" id="chk-arranhado"><label class="form-check-label text-white">Carroceria Arranhada</label></div></div>
+                                        <div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chk-pertences"><label class="form-check-label text-white">Pertences no Interior</label></div></div>
+                                    </div>
+                                </div>
+                            </div>
 
-    <!-- DASHBOARD -->
-    <section class="section active" id="s-dashboard">
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-accent" style="background:var(--success)"></div><div class="kpi-lbl">FATURAMENTO MÊS</div><div class="kpi-val" id="kFat" style="color:var(--success)">R$ 0</div><div class="kpi-sub">Ordens concluídas</div><div class="kpi-icon">💰</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:var(--brand)"></div><div class="kpi-lbl">NO PÁTIO AGORA</div><div class="kpi-val" id="kPatio" style="color:var(--brand)">0</div><div class="kpi-sub">Veículos em serviço</div><div class="kpi-icon">🔧</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:var(--warn)"></div><div class="kpi-lbl">ESTOQUE CRÍTICO</div><div class="kpi-val" id="kStock" style="color:var(--warn)">0</div><div class="kpi-sub">Abaixo do mínimo</div><div class="kpi-icon">📦</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:var(--danger)"></div><div class="kpi-lbl">TÍTULOS VENCIDOS</div><div class="kpi-val" id="kVenc" style="color:var(--danger)">0</div><div class="kpi-sub">Contas em atraso</div><div class="kpi-icon">📋</div></div>
-      </div>
-      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
-        <div class="kpi"><div class="kpi-accent" style="background:#60A5FA"></div><div class="kpi-lbl">AGENDA HOJE</div><div class="kpi-val" id="kAgenda" style="color:#60A5FA">0</div><div class="kpi-sub">Agendamentos</div><div class="kpi-icon">📅</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:#F97316"></div><div class="kpi-lbl">AGUARDANDO</div><div class="kpi-val" id="kAguard" style="color:#F97316">0</div><div class="kpi-sub">Na triagem</div><div class="kpi-icon">⏳</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:var(--success)"></div><div class="kpi-lbl">AUTORIZADOS</div><div class="kpi-val" id="kAprov" style="color:var(--success)">0</div><div class="kpi-sub">Prontos p/ execução</div><div class="kpi-icon">✅</div></div>
-      </div>
-      <div class="grid2">
-        <div class="card"><div class="card-hd"><div class="card-title">📋 ÚLTIMAS O.S.</div></div><div class="card-flush"><table class="tbl"><thead><tr><th>Placa</th><th>Cliente</th><th>Status</th><th>Valor</th></tr></thead><tbody id="dashRecentOS"></tbody></table></div></div>
-        <div class="card"><div class="card-hd"><div class="card-title">⚠️ ALERTAS ESTOQUE</div></div><div class="card-flush"><table class="tbl"><thead><tr><th>Peça</th><th>Atual</th><th>Mín</th><th>Status</th></tr></thead><tbody id="dashAlertStock"></tbody></table></div></div>
-      </div>
-    </section>
+                            <div class="tab-pane fade" id="tab-os-diagnostico">
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="text-info fw-bold small">Diagnóstico do Mecânico / Parecer Técnico</label>
+                                        <button type="button" class="btn btn-sm btn-outline-info rounded-pill" onclick="os.iniciarDitado()"><i class="bi bi-mic-fill"></i> Ditar Diagnóstico</button>
+                                    </div>
+                                    <textarea class="form-control bg-black text-white border-secondary" id="os-diagnostico" rows="3" placeholder="Descreva os problemas reais encontrados e as soluções aplicadas..."></textarea>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="text-white mb-0 fw-bold">Relação de Peças e Mão de Obra</h6>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-warning gestao-only" onclick="os.buscarEstoque()"><i class="bi bi-box-seam"></i> Puxar Estoque</button>
+                                        <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="os.addLinhaPeca()"><i class="bi bi-plus-circle"></i> Inserir Item</button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive bg-black p-2 border border-secondary rounded">
+                                    <table class="table table-dark table-sm align-middle mb-0">
+                                        <thead><tr><th class="ps-2">Descrição</th><th width="80">Qtd</th><th width="120" class="gestao-only">Custo (R$)</th><th width="120">Venda (R$)</th><th width="120">Total</th><th width="50"></th></tr></thead>
+                                        <tbody id="tb-pecas-os"></tbody>
+                                    </table>
+                                </div>
+                                <div class="text-end mt-3">
+                                    <h4 class="text-white">Total Geral: <span class="text-success fw-bold ms-2 fs-3" id="os-total-display">R$ 0,00</span></h4>
+                                </div>
+                            </div>
 
-    <!-- AGENDA -->
-    <section class="section" id="s-agenda">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:9px">
-        <div style="font-family:var(--ff-display);font-weight:700;font-size:.95rem">Agendamentos</div>
-        <button class="btn btn-brand btn-sm" onclick="prepAgenda('add');openModal('modalAgenda')">+ NOVO AGENDAMENTO</button>
-      </div>
-      <div class="card"><div class="card-flush"><table class="tbl"><thead><tr><th>Data/Hora</th><th>Cliente</th><th>Veículo</th><th>Serviço</th><th>Mecânico</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbAgenda"></tbody></table></div></div>
-    </section>
+                            <div class="tab-pane fade" id="tab-os-fotos">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <p class="text-white-50 small mb-0">Tire fotos das avarias e peças quebradas. Isso aparecerá no portal do cliente para gerar confiança.</p>
+                                    <button type="button" class="btn btn-warning fw-bold text-dark shadow" id="btn-upload-foto"><i class="bi bi-camera-fill me-1"></i> Adicionar Foto</button>
+                                </div>
+                                <div class="d-flex gap-3 flex-wrap p-3 bg-black border border-secondary rounded border-dashed min-h-150" id="galeria-os-fotos">
+                                    </div>
+                            </div>
 
-    <!-- KANBAN -->
-    <section class="section" id="s-kanban">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;gap:9px;flex-wrap:wrap">
-        <div style="display:flex;gap:7px;align-items:center;flex:1;min-width:0">
-          <input class="inp" id="searchOS" placeholder="Placa ou cliente..." oninput="renderKanban()" style="max-width:200px">
-          <select class="inp" id="filtroNichoKanban" onchange="renderKanban()" style="max-width:120px;cursor:pointer">
-            <option value="">Todos</option><option value="carro">🚗 Carros</option><option value="moto">🏍️ Motos</option><option value="bicicleta">🚲 Bicicletas</option>
-          </select>
+                            <div class="tab-pane fade" id="tab-os-auditoria">
+                                <div class="p-3 bg-black border border-secondary rounded min-h-300 overflow-y-auto">
+                                    <ul class="timeline text-white-50 m-0 p-0 ms-3" id="lista-auditoria-os" style="list-style: none; border-left: 2px solid #334155;">
+                                        </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer bg-black border-secondary d-flex justify-content-between p-4">
+                    <div class="d-flex gap-3 align-items-center w-50">
+                        <select class="form-select bg-dark text-white fw-bold border-secondary w-100 p-3" id="os-status">
+                            <option value="patio">🟢 Fase 1: Avaliação Inicial / Fila</option>
+                            <option value="orcamento" class="text-primary">🔵 Fase 2: Orçamento Feito</option>
+                            <option value="aprovacao" class="text-warning">🟡 Fase 3: Aguardando Cliente</option>
+                            <option value="box" class="text-info">🛠️ Fase 4: Aprovado / No Box</option>
+                            <option value="pronto" class="text-success">🟣 Fase 5: Pronto para Entrega</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-info fw-bold px-5 py-3 fs-5 shadow-lg text-dark" onclick="os.salvarOS()"><i class="bi bi-floppy-fill me-2"></i> GRAVAR PRONTUÁRIO</button>
+                </div>
+            </div>
         </div>
-        <button class="btn btn-brand btn-sm" onclick="prepOS('add');openModal('modalOS')">+ NOVA O.S.</button>
-      </div>
-      <div class="kanban" id="kanbanBoard">
-        <div class="k-col" style="border-top:2px solid var(--text-muted,#94A3B8)"><div class="k-head"><span class="k-lbl" style="color:var(--text-muted,#94A3B8)">TRIAGEM</span><span class="k-cnt" id="cnt-Aguardando">0</span></div><div class="k-body" id="kb-Aguardando"></div></div>
-        <div class="k-col" style="border-top:2px solid var(--warn,#F59E0B)"><div class="k-head"><span class="k-lbl" style="color:var(--warn,#F59E0B)">ORÇAMENTO</span><span class="k-cnt" id="cnt-Orcamento">0</span></div><div class="k-body" id="kb-Orcamento"></div></div>
-        <div class="k-col" style="border-top:2px solid var(--brand,#3B82F6)"><div class="k-head"><span class="k-lbl" style="color:var(--brand,#3B82F6)">APROVADO</span><span class="k-cnt" id="cnt-Aprovado">0</span></div><div class="k-body" id="kb-Aprovado"></div></div>
-        <div class="k-col" style="border-top:2px solid #F97316"><div class="k-head"><span class="k-lbl" style="color:#F97316">EM SERVIÇO</span><span class="k-cnt" id="cnt-Andamento">0</span></div><div class="k-body" id="kb-Andamento"></div></div>
-        <div class="k-col" style="border-top:2px solid var(--success,#22D3A0)"><div class="k-head"><span class="k-lbl" style="color:var(--success,#22D3A0)">PRONTO/PAGO</span><span class="k-cnt" id="cnt-Concluido">0</span></div><div class="k-body" id="kb-Concluido"></div></div>
-      </div>
-    </section>
+    </div>
 
-    <!-- CLIENTES -->
-    <section class="section" id="s-clientes">
-      <div class="grid2">
-        <div class="card"><div class="card-hd"><div class="card-title">👥 CLIENTES</div><button class="btn btn-brand btn-sm" onclick="prepCliente('add');openModal('modalCliente')">+ NOVO</button></div><div class="card-flush"><table class="tbl"><thead><tr><th>Nome</th><th>WhatsApp</th><th>Veículos</th><th>Gasto Total</th><th>Ações</th></tr></thead><tbody id="tbClientes"></tbody></table></div></div>
-        <div class="card"><div class="card-hd"><div class="card-title">🚗 VEÍCULOS</div><button class="btn btn-brand btn-sm" onclick="prepVeiculo('add');openModal('modalVeiculo')">+ NOVO</button></div><div class="card-flush"><table class="tbl"><thead><tr><th>Placa</th><th>Tipo</th><th>Modelo</th><th>Dono</th><th>KM</th><th>Ações</th></tr></thead><tbody id="tbVeiculos"></tbody></table></div></div>
-      </div>
-    </section>
-
-    <!-- ESTOQUE -->
-    <section class="section" id="s-estoque">
-      <div class="grid21">
-        <div class="card"><div class="card-hd"><div class="card-title">📦 INVENTÁRIO</div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-success btn-sm" onclick="prepNF();openModal('modalNF')">+ ENTRADA NF</button><button class="btn btn-brand btn-sm" onclick="prepPeca('add');openModal('modalPeca')">+ NOVA PEÇA</button></div></div><div class="card-flush"><table class="tbl"><thead><tr><th>Ref</th><th>Descrição</th><th>Custo</th><th>Venda</th><th>Margem</th><th>Qtd</th><th>Mín</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbEstoque"></tbody></table></div></div>
-        <div class="card"><div class="card-hd"><div class="card-title">🏭 FORNECEDORES</div><button class="btn btn-brand btn-sm" onclick="prepFornec();openModal('modalFornec')">+ NOVO</button></div><div class="card-flush"><table class="tbl"><thead><tr><th>Razão Social</th><th>Segmento</th><th>Ações</th></tr></thead><tbody id="tbFornec"></tbody></table></div></div>
-      </div>
-    </section>
-
-    <!-- FINANCEIRO -->
-    <section class="section" id="s-financeiro">
-      <div class="dre-grid">
-        <div class="dre-card ent"><div class="dre-lbl">RECEITAS PAGAS</div><div class="dre-val" id="dreEntradas">R$ 0,00</div></div>
-        <div class="dre-card sai"><div class="dre-lbl">DESPESAS PAGAS</div><div class="dre-val" id="dreSaidas">R$ 0,00</div></div>
-        <div class="dre-card sal"><div class="dre-lbl">SALDO LÍQUIDO</div><div class="dre-val" id="dreSaldo">R$ 0,00</div></div>
-      </div>
-      <div class="card">
-        <div class="card-hd">
-          <div class="card-title">💳 FLUXO DE CAIXA</div>
-          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
-            <select class="inp" style="width:105px;cursor:pointer" id="filtroFinTipo" onchange="renderFinanceiro()"><option value="">Todos</option><option value="Entrada">Receitas</option><option value="Saída">Despesas</option></select>
-            <select class="inp" style="width:115px;cursor:pointer" id="filtroFinStatus" onchange="renderFinanceiro()"><option value="">Todos</option><option value="Pago">Liquidado</option><option value="Pendente">Pendente</option></select>
-            <input type="month" class="inp" style="width:135px" id="filtroFinMes" onchange="renderFinanceiro()">
-            <button class="btn btn-brand btn-sm" onclick="prepFin();openModal('modalFin')">+ LANÇAMENTO</button>
-          </div>
+    <div class="modal fade" id="modal-cliente" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header bg-black border-secondary p-4">
+                    <h5 class="modal-title text-white fw-bold"><i class="bi bi-person-vcard text-info me-2"></i> Ficha do Cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="form-cliente">
+                        <input type="hidden" id="cli-id">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-8"><label class="text-white-50 small">Nome Completo / Razão Social</label><input type="text" class="form-control bg-black text-white" id="cli-nome" required></div>
+                            <div class="col-md-4"><label class="text-white-50 small">CPF/CNPJ</label><input type="text" class="form-control bg-black text-warning fw-bold" id="cli-doc" onblur="clientes.validarDoc()"></div>
+                            <div class="col-md-6"><label class="text-white-50 small">WhatsApp / Celular</label><input type="text" class="form-control bg-black text-white" id="cli-tel" required></div>
+                            <div class="col-md-6"><label class="text-white-50 small">E-mail</label><input type="email" class="form-control bg-black text-white" id="cli-email"></div>
+                        </div>
+                        <h6 class="text-info border-bottom border-secondary pb-2 mb-3 mt-4 fw-bold"><i class="bi bi-shield-lock me-1"></i> Credenciais do Portal Web (Acesso do Cliente)</h6>
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6"><label class="text-white-50 small">Login Único</label><input type="text" class="form-control bg-black text-info fw-bold" id="cli-user" required placeholder="Ex: email ou telefone"></div>
+                            <div class="col-md-6"><label class="text-white-50 small">Senha (PIN Gerado)</label><input type="text" class="form-control bg-black text-warning fw-bold" id="cli-pass" readonly></div>
+                        </div>
+                        <div class="text-end mt-4"><button type="button" class="btn btn-primary fw-bold px-5" onclick="clientes.salvarCliente()">Salvar Cliente</button></div>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="card-flush"><table class="tbl"><thead><tr><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th>Pagamento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbFinanceiro"></tbody></table></div>
-      </div>
-    </section>
-
-    <!-- EQUIPE -->
-    <section class="section" id="s-equipe">
-      <div class="grid2">
-        <div class="card"><div class="card-hd"><div class="card-title">👷 EQUIPE TÉCNICA</div><button class="btn btn-brand btn-sm" onclick="prepFunc('add');openModal('modalFunc')">+ CONTRATAR</button></div><div class="card-flush"><table class="tbl"><thead><tr><th>Colaborador</th><th>Cargo</th><th>Login</th><th>Comissão</th><th>Ações</th></tr></thead><tbody id="tbEquipe"></tbody></table></div></div>
-        <div class="card"><div class="card-hd"><div class="card-title" style="color:var(--success)">💸 COMISSÕES</div></div><div class="card-body" id="boxComissoes"></div></div>
-      </div>
-    </section>
-
-    <!-- CHAT CRM -->
-    <section class="section" id="s-chat">
-      <div class="chat-layout">
-        <div class="card" style="padding:0">
-          <div class="card-hd"><div class="card-title">💬 CLIENTES</div></div>
-          <div class="chat-list" id="chatLista"></div>
-        </div>
-        <div class="chat-main">
-          <div class="chat-hd" id="chatHead">Selecione um cliente</div>
-          <div class="chat-msgs" id="chatMsgs"></div>
-          <div class="chat-foot" id="chatFoot" style="display:none">
-            <input class="inp" id="chatInput" placeholder="Responder..." style="flex:1">
-            <button class="btn btn-brand btn-sm" onclick="enviarChat()">ENVIAR</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- IA -->
-    <section class="section" id="s-ia">
-      <div class="card">
-        <div class="card-hd">
-          <div class="card-title" style="color:var(--warn)">🤖 thIAguinho — DIAGNÓSTICO</div>
-          <div style="display:flex;gap:7px;flex-wrap:wrap">
-            <button class="btn btn-warn btn-sm" onclick="iaAnalisarDRE()">📊 ANALISAR DRE</button>
-            <button class="btn btn-warn btn-sm" onclick="iaAnalisarEstoque()">📦 ESTOQUE</button>
-          </div>
-        </div>
-        <div class="ia-box">
-          <div class="ia-msgs" id="iaMsgs"><div class="ia-msg bot"><strong>thIAguinho:</strong> Sistema operacional. Acesso à base de dados da oficina. O que deseja analisar?</div></div>
-          <div class="ia-inp">
-            <input class="inp" id="iaInput" placeholder="Ex: A placa ABC-1234 trocou óleo há menos de 3000km?" style="flex:1">
-            <button class="btn btn-brand btn-sm" onclick="iaPerguntar()">PROCESSAR</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- AUDITORIA -->
-    <section class="section" id="s-auditoria">
-      <div class="card"><div class="card-hd"><div class="card-title">🔒 LOG DE AUDITORIA</div></div><div class="card-flush"><table class="tbl"><thead><tr><th>Data/Hora</th><th>Módulo</th><th>Usuário</th><th>Ação</th></tr></thead><tbody id="tbAuditoria"></tbody></table></div></div>
-    </section>
-
-  </div>
-
-  <!-- BOTTOM NAV -->
-  <nav class="bottom-nav">
-    <div class="bn-item active" onclick="navTo('dashboard',this)" data-sec="dashboard"><span class="bn-icon">📊</span>Dashboard</div>
-    <div class="bn-item" onclick="navTo('kanban',this)" data-sec="kanban"><span class="bn-icon">🔧</span>O.S.</div>
-    <div class="bn-item" onclick="navTo('clientes',this)" data-sec="clientes"><span class="bn-icon">👥</span>Clientes</div>
-    <div class="bn-item" onclick="navTo('chat',this)" data-sec="chat"><span class="bn-icon">💬</span>Chat<span class="bn-badge" id="chatBadgeMob">0</span></div>
-    <div class="bn-item" onclick="openSB()"><span class="bn-icon">☰</span>Mais</div>
-  </nav>
-</div>
-</div>
-
-<!-- ══════════════ LIGHTBOX ══════════════ -->
-<div id="lightbox" class="hidden" onclick="if(event.target===this)_lbClose()">
-  <div id="lb-inner">
-    <div id="lb-content"></div>
-    <button class="lb-nav" id="lb-prev" onclick="_lbNav(-1)">‹</button>
-    <button class="lb-nav" id="lb-next" onclick="_lbNav(1)">›</button>
-    <button class="lb-close" onclick="_lbClose()">✕</button>
-    <div class="lb-actions">
-      <a class="lb-btn" id="lb-dl" href="#" download>⬇ Baixar</a>
-      <button class="lb-btn" onclick="_lbCopy()">📋 URL</button>
     </div>
-  </div>
-</div>
 
-<!-- ══════════════ MODAL OS ══════════════ -->
-<div class="overlay" id="modalOS">
-<div class="modal m-xl">
-  <div class="m-hd">
-    <div class="m-title">📋 FICHA TÉCNICA O.S. <span class="badge b-brand" id="osIdBadge" style="font-size:.58rem">NOVA</span></div>
-    <button class="m-close" onclick="closeModal('modalOS')">✕</button>
-  </div>
-  <div class="m-tabs">
-    <div class="mtab active" onclick="switchTab(this,'t1','t2','t3','t4')">1. DADOS</div>
-    <div class="mtab" onclick="switchTab(this,'t2','t1','t3','t4')">2. ORÇAMENTO</div>
-    <div class="mtab" onclick="switchTab(this,'t3','t1','t2','t4')">3. PROVAS & CHECKLIST</div>
-    <div class="mtab" onclick="switchTab(this,'t4','t1','t2','t3')">4. HISTÓRICO</div>
-  </div>
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container" style="z-index: 1080; pointer-events: none;"></div>
 
-  <!-- TAB 1 -->
-  <div class="tab-pane active" id="t1">
-    <div class="fg"><label class="lbl">Nível de Urgência</label>
-      <div class="prio-sel">
-        <label class="prio-opt" data-prio="verde"><input type="radio" name="osPrioridade" id="osPrioridade" value="verde" checked>🟢 Normal</label>
-        <label class="prio-opt" data-prio="amarelo"><input type="radio" name="osPrioridade" value="amarelo">🟡 Urgente</label>
-        <label class="prio-opt" data-prio="vermelho"><input type="radio" name="osPrioridade" value="vermelho">🔴 Imediato</label>
-      </div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Tipo de Veículo</label><select class="sel" id="osTipoVeiculo" onchange="filtrarVeiculosOS()"><option value="carro">🚗 Carro</option><option value="moto">🏍️ Moto</option><option value="bicicleta">🚲 Bicicleta</option></select></div>
-      <div class="fg"><label class="lbl">Status Kanban</label><select class="sel" id="osStatus" onchange="verificarStatusOS()"><option value="Aguardando">Triagem / Avaliação</option><option value="Orcamento">Em Orçamento</option><option value="Aprovado">Aprovado (Fila)</option><option value="Andamento">Em Serviço</option><option value="Concluido">Concluído (Faturar)</option><option value="Cancelado">Cancelado</option></select></div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Cliente Proprietário</label><div style="display:flex;gap:6px"><select class="sel" id="osCliente" onchange="filtrarVeiculosOS()" style="flex:1"></select><button class="btn btn-ghost btn-icon" onclick="prepCliente('add');openModal('modalCliente')">+</button></div></div>
-      <div class="fg"><label class="lbl">Veículo Vinculado</label><div style="display:flex;gap:6px"><select class="sel" id="osVeiculo" style="flex:1"></select><button class="btn btn-ghost btn-icon" onclick="prepVeiculo('add');openModal('modalVeiculo')">+</button></div></div>
-    </div>
-    <div class="fr fr3">
-      <div class="fg"><label class="lbl">Mecânico</label><select class="sel" id="osMec"></select></div>
-      <div class="fg"><label class="lbl">Data de Entrada</label><input type="date" class="inp" id="osData"></div>
-      <div class="fg"><label class="lbl">KM Entrada</label><input type="number" class="inp mono" id="osKm" placeholder="Ex: 45000"></div>
-    </div>
-    <div class="fg"><label class="lbl">Defeito Reclamado / Serviço</label><textarea class="ta" id="osDescricao" rows="3" placeholder="Descreva o problema ou serviço solicitado..."></textarea></div>
-    <div class="fg"><label class="lbl">Diagnóstico Técnico (Interno)</label><textarea class="ta" id="osDiagnostico" rows="2" placeholder="Diagnóstico da equipe técnica..."></textarea></div>
-  </div>
-
-  <!-- TAB 2 -->
-  <div class="tab-pane" id="t2">
-    <div style="background:var(--surf-2,#1A2235);border:1px solid rgba(34,211,160,.15);border-radius:var(--r-lg,12px);padding:15px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:9px">
-        <div style="font-family:var(--ff-display);font-weight:700;font-size:.88rem;color:var(--success,#22D3A0)">💵 PEÇAS E MÃO DE OBRA</div>
-        <button type="button" class="btn btn-success btn-sm" onclick="adicionarPecaOS()">+ PEÇA DO ESTOQUE</button>
-      </div>
-      <div class="fg"><label class="lbl">Mão de Obra (R$)</label><input type="number" step="0.01" class="inp mono" id="osMaoObra" value="0" oninput="calcOS()"></div>
-      <div class="peca-row" style="margin-bottom:4px">
-        <div class="lbl" style="margin:0">PEÇA</div><div class="lbl" style="margin:0">QTD</div>
-        <div class="lbl peca-custo" style="margin:0">CUSTO</div><div class="lbl" style="margin:0">VENDA</div><div></div>
-      </div>
-      <div id="containerPecasOS" style="display:flex;flex-direction:column;gap:6px;margin-bottom:11px"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:13px;background:rgba(34,211,160,.05);border-radius:var(--r-md,8px);border:1px dashed rgba(34,211,160,.25)">
-        <span style="font-family:var(--ff-mono);font-size:.66rem;color:var(--text-muted)">TOTAL DA O.S.:</span>
-        <span style="font-family:var(--ff-display);font-size:1.75rem;font-weight:800;color:var(--success)">R$ <span id="osTotalVal">0,00</span></span>
-        <input type="hidden" id="osTotalHidden" value="0">
-      </div>
-    </div>
-    <!-- Área pagamento -->
-    <div id="areaPgtoOS" class="hidden" style="background:var(--brand-dim);border:1px solid rgba(59,130,246,.2);border-radius:var(--r-lg);padding:15px;margin-top:13px">
-      <div style="font-family:var(--ff-display);font-weight:700;font-size:.88rem;color:var(--brand);margin-bottom:13px">🏦 FECHO E RECEBIMENTO</div>
-      <div class="fr fr3">
-        <div class="fg"><label class="lbl">Forma de Pagamento</label>
-          <select class="sel" id="osPgtoForma" onchange="checkPgtoOS()">
-            <option value="Dinheiro">Dinheiro</option><option value="PIX">PIX</option>
-            <option value="Débito">Cartão Débito</option><option value="Crédito à Vista">Crédito à Vista</option>
-            <option value="Crédito Parcelado">Crédito Parcelado</option><option value="Boleto">Boleto (Pendente)</option>
-          </select>
-        </div>
-        <div class="fg"><label class="lbl">1º Vencimento</label><input type="date" class="inp" id="osPgtoData"></div>
-        <div class="fg hidden" id="divParcelasOS"><label class="lbl">Parcelas</label>
-          <select class="sel" id="osPgtoParcelas"><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="6">6x</option><option value="10">10x</option><option value="12">12x</option></select>
-        </div>
-      </div>
-      <div class="fr fr2">
-        <div class="fg"><label class="lbl">Próxima Revisão — Data</label><input type="date" class="inp" id="osProxRev"></div>
-        <div class="fg"><label class="lbl">Próxima Revisão — KM</label><input type="number" class="inp mono" id="osProxKm" placeholder="KM para retornar"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 3 -->
-  <div class="tab-pane" id="t3">
-    <div style="background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px;margin-bottom:13px">
-      <div style="font-family:var(--ff-display);font-weight:700;margin-bottom:11px;color:var(--brand)">📸 GALERIA DE PROVAS</div>
-      <div class="upload-btns">
-        <button type="button" class="upload-btn" onclick="_openCamera()">📷 Câmera</button>
-        <button type="button" class="upload-btn" onclick="_openGallery()">🖼️ Galeria</button>
-      </div>
-      <input type="file" id="osFileInput" accept="image/*,video/*" style="display:none" multiple>
-      <input type="file" id="osCameraInput" accept="image/*" capture="environment" style="display:none">
-      <button class="btn btn-brand btn-sm btn-full" onclick="uploadOsMedia()" id="btnUploadMedia" style="margin-bottom:11px">FAZER UPLOAD</button>
-      <div class="media-grid" id="osMediaGrid"></div>
-      <input type="hidden" id="osMediaArray" value="[]">
-    </div>
-    <div style="background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px">
-      <div style="font-family:var(--ff-display);font-weight:700;margin-bottom:11px;color:var(--warn)">✅ CHECKLIST DE ENTREGA</div>
-      <div class="fr fr3">
-        <div class="fg"><label class="lbl">Pneu Dianteiro (%)</label><input type="number" class="inp mono" id="chkPneuDia" placeholder="0-100" max="100" min="0"></div>
-        <div class="fg"><label class="lbl">Pneu Traseiro (%)</label><input type="number" class="inp mono" id="chkPneuTra" placeholder="0-100" max="100" min="0"></div>
-        <div class="fg"><label class="lbl">Nível Combustível</label><select class="sel" id="chkComb"><option>N/A</option><option>Reserva</option><option>1/4</option><option>Meio</option><option>3/4</option><option>Cheio</option></select></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px">
-        <label style="display:flex;align-items:center;gap:9px;padding:9px;background:var(--surf-3);border:1px solid var(--border);border-radius:var(--r-md);cursor:pointer;font-size:.82rem"><input type="checkbox" id="chkPainel" style="accent-color:var(--brand);width:17px;height:17px"> Painel OK</label>
-        <label style="display:flex;align-items:center;gap:9px;padding:9px;background:var(--surf-3);border:1px solid var(--border);border-radius:var(--r-md);cursor:pointer;font-size:.82rem"><input type="checkbox" id="chkPressao" style="accent-color:var(--brand);width:17px;height:17px"> Pressão Pneus OK</label>
-        <label style="display:flex;align-items:center;gap:9px;padding:9px;background:var(--surf-3);border:1px solid var(--border);border-radius:var(--r-md);cursor:pointer;font-size:.82rem"><input type="checkbox" id="chkCarroceria" style="accent-color:var(--brand);width:17px;height:17px"> Carroceria OK</label>
-        <label style="display:flex;align-items:center;gap:9px;padding:9px;background:var(--surf-3);border:1px solid var(--border);border-radius:var(--r-md);cursor:pointer;font-size:.82rem"><input type="checkbox" id="chkDocumentos" style="accent-color:var(--brand);width:17px;height:17px"> Documentos OK</label>
-      </div>
-      <div class="fg"><label class="lbl">Avarias Prévias / Observações de Entrega</label><textarea class="ta" id="chkObs" rows="3" placeholder="Arranhões, amassados, acessórios ausentes..."></textarea></div>
-    </div>
-  </div>
-
-  <!-- TAB 4 -->
-  <div class="tab-pane" id="t4">
-    <div class="log-quick">
-      <div class="log-quick-title">➕ Adicionar Registro ao Histórico</div>
-      <div class="fg"><textarea class="ta" id="logDescricao" rows="2" placeholder="Descreva o serviço realizado, observação ou peça instalada..."></textarea></div>
-      <div class="fr fr2" style="margin-bottom:9px">
-        <div class="fg" style="margin:0"><label class="lbl">Peças (opcional)</label><input class="inp" id="logPecas" placeholder="Ex: Pastilha traseira, Óleo 5W30"></div>
-        <div class="fg" style="margin:0"><label class="lbl">Valor cobrado R$ (opcional)</label><input type="number" step="0.01" class="inp mono" id="logValor" placeholder="0,00"></div>
-      </div>
-      <button class="btn btn-brand btn-full" onclick="addLogTimeline()">✓ ADICIONAR AO HISTÓRICO</button>
-    </div>
-    <div id="postLogActions" style="background:var(--surf-2);border:1px solid var(--border-med);border-radius:var(--r-lg);padding:12px;margin-top:9px;display:none">
-      <div style="font-family:var(--ff-display);font-weight:700;font-size:.84rem;margin-bottom:9px;text-align:center">Mover status da O.S.?</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">
-        <button class="btn btn-brand btn-sm" onclick="_moveNext()">→ Avançar</button>
-        <button class="btn btn-warn btn-sm" onclick="_movePrev()">← Voltar</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('postLogActions').style.display='none'">✓ Manter</button>
-      </div>
-    </div>
-    <div class="divider"></div>
-    <div style="font-family:var(--ff-mono);font-size:.58rem;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px">HISTÓRICO DA O.S.</div>
-    <div id="osTimeline"></div>
-  </div>
-
-  <div class="m-foot">
-    <button class="btn btn-ghost btn-sm hidden" id="btnGerarPDFOS" onclick="gerarPDFOS()">📄 EXPORTAR PDF</button>
-    <button class="btn btn-ghost btn-sm" onclick="closeModal('modalOS')">Cancelar</button>
-    <button class="btn btn-brand" id="btnSalvarOS" onclick="salvarOS()">REGISTRAR O.S.</button>
-  </div>
-  <input type="hidden" id="osId">
-  <input type="hidden" id="osTimelineData" value="[]">
-</div>
-</div>
-
-<!-- MODAL CLIENTE -->
-<div class="overlay" id="modalCliente">
-<div class="modal m-md">
-  <div class="m-hd"><div class="m-title">👤 CLIENTE B2C</div><button class="m-close" onclick="closeModal('modalCliente')">✕</button></div>
-  <div class="m-body">
-    <input type="hidden" id="cliId">
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Nome Completo</label><input class="inp" id="cliNome" placeholder="João da Silva"></div>
-      <div class="fg"><label class="lbl">WhatsApp (só números)</label><input type="tel" class="inp mono" id="cliWpp" placeholder="17999999999"></div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">CPF / Documento</label><input class="inp mono" id="cliDoc" placeholder="000.000.000-00"></div>
-      <div class="fg"><label class="lbl">E-mail</label><input type="email" class="inp" id="cliEmail" placeholder="email@exemplo.com"></div>
-    </div>
-    <div class="divider"></div>
-    <div style="font-family:var(--ff-mono);font-size:.58rem;color:var(--brand);letter-spacing:.08em;margin-bottom:11px">🔑 ACESSO AO PORTAL DO CLIENTE</div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Login</label><input class="inp mono" id="cliLogin" placeholder="joao.silva" autocomplete="off"></div>
-      <div class="fg"><label class="lbl">PIN de Acesso</label><div style="display:flex;gap:6px"><input class="inp mono" id="cliPin" placeholder="abc123" autocomplete="off" style="flex:1"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('cliPin').value=Math.random().toString(36).slice(-6)" style="flex-shrink:0">GERAR</button></div></div>
-    </div>
-  </div>
-  <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal('modalCliente')">Cancelar</button><button class="btn btn-brand" onclick="salvarCliente()">SALVAR</button></div>
-</div>
-</div>
-
-<!-- MODAL VEÍCULO -->
-<div class="overlay" id="modalVeiculo">
-<div class="modal m-md">
-  <div class="m-hd"><div class="m-title">🚗 VEÍCULO</div><button class="m-close" onclick="closeModal('modalVeiculo')">✕</button></div>
-  <div class="m-body">
-    <input type="hidden" id="veicId">
-    <div class="fg"><label class="lbl">Tipo de Veículo</label><select class="sel" id="veicTipo"><option value="carro">🚗 Carro</option><option value="moto">🏍️ Moto</option><option value="bicicleta">🚲 Bicicleta</option></select></div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Proprietário</label><select class="sel" id="veicDono"></select></div>
-      <div class="fg"><label class="lbl">Placa / Identificação</label><input class="inp mono" id="veicPlaca" placeholder="ABC-1234" style="text-transform:uppercase;letter-spacing:.1em;font-weight:700"></div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Marca / Modelo</label><input class="inp" id="veicModelo" placeholder="Honda CB 500F" autocomplete="off"></div>
-      <div class="fg"><label class="lbl">Ano</label><input type="number" class="inp mono" id="veicAno" placeholder="2022"></div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Cor</label><input class="inp" id="veicCor" placeholder="Preto Metálico"></div>
-      <div class="fg"><label class="lbl">KM Atual</label><input type="number" class="inp mono" id="veicKm" placeholder="45000"></div>
-    </div>
-    <div class="fg"><label class="lbl">Observações</label><textarea class="ta" id="veicObs" rows="2" placeholder="Modificações, histórico..."></textarea></div>
-  </div>
-  <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal('modalVeiculo')">Cancelar</button><button class="btn btn-brand" onclick="salvarVeiculo()">SALVAR</button></div>
-</div>
-</div>
-
-<!-- MODAL PEÇA -->
-<div class="overlay" id="modalPeca">
-<div class="modal m-md">
-  <div class="m-hd"><div class="m-title">🔩 PEÇA / PRODUTO</div><button class="m-close" onclick="closeModal('modalPeca')">✕</button></div>
-  <div class="m-body">
-    <input type="hidden" id="pecaId">
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Código / Referência</label><input class="inp mono" id="pecaCodigo" placeholder="OIL-5W30-1L" autocomplete="off"></div>
-      <div class="fg"><label class="lbl">Descrição</label><input class="inp" id="pecaDesc" placeholder="Óleo Motor 5W30 1L" required></div>
-    </div>
-    <div class="fr fr3">
-      <div class="fg"><label class="lbl">Custo (R$)</label><input type="number" step="0.01" class="inp mono" id="pecaCusto" placeholder="0,00" oninput="calcMargem()"></div>
-      <div class="fg"><label class="lbl">Venda (R$)</label><input type="number" step="0.01" class="inp mono" id="pecaVenda" placeholder="0,00" oninput="calcMargem()"></div>
-      <div class="fg"><label class="lbl">Margem</label><div class="inp" id="pecaMargem" style="color:var(--success);font-weight:700;display:flex;align-items:center">—</div></div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Quantidade Inicial</label><input type="number" class="inp mono" id="pecaQtd" placeholder="0"></div>
-      <div class="fg"><label class="lbl">Estoque Mínimo</label><input type="number" class="inp mono" id="pecaMin" placeholder="2"></div>
-    </div>
-    <div class="fg"><label class="lbl">Unidade</label><select class="sel" id="pecaUnd"><option value="UN">UN — Unidade</option><option value="PC">PC — Peça</option><option value="L">L — Litro</option><option value="ML">ML — Mililitro</option><option value="KG">KG — Quilograma</option><option value="M">M — Metro</option><option value="JG">JG — Jogo</option><option value="PAR">PAR — Par</option><option value="CX">CX — Caixa</option></select></div>
-  </div>
-  <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal('modalPeca')">Cancelar</button><button class="btn btn-brand" onclick="salvarPeca()">SALVAR PEÇA</button></div>
-</div>
-</div>
-
-<!-- MODAL NF -->
-<div class="overlay" id="modalNF">
-<div class="modal m-lg">
-  <div class="m-hd"><div class="m-title">🧾 ENTRADA NF / COMPRA</div><button class="m-close" onclick="closeModal('modalNF')">✕</button></div>
-  <div class="m-body">
-    <div class="fr fr3">
-      <div class="fg"><label class="lbl">Fornecedor</label><select class="sel" id="nfFornec"></select></div>
-      <div class="fg"><label class="lbl">Número NF</label><input class="inp mono" id="nfNumero" placeholder="00001" autocomplete="off"></div>
-      <div class="fg"><label class="lbl">Data da NF</label><input type="date" class="inp" id="nfData"></div>
-    </div>
-    <div style="background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px;margin-bottom:13px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
-        <div style="font-family:var(--ff-display);font-weight:700;font-size:.85rem">ITENS DA NOTA FISCAL</div>
-        <button class="btn btn-ghost btn-sm" onclick="adicionarItemNF()">+ ITEM</button>
-      </div>
-      <div class="nf-row" style="margin-bottom:5px">
-        <div class="lbl" style="margin:0">DESCRIÇÃO</div><div class="lbl" style="margin:0">QTD</div>
-        <div class="lbl peca-custo" style="margin:0">CUSTO</div><div class="lbl" style="margin:0">VENDA</div><div></div>
-      </div>
-      <div id="containerItensNF" style="display:flex;flex-direction:column;gap:6px;margin-bottom:9px"></div>
-    </div>
-    <div class="fr fr3">
-      <div class="fg"><label class="lbl">Forma de Pagamento</label><select class="sel" id="nfPgtoForma" onchange="checkPgtoNF()"><option value="Dinheiro">Dinheiro</option><option value="PIX">PIX</option><option value="Boleto">Boleto (Pendente)</option><option value="Parcelado">Parcelado (Títulos)</option></select></div>
-      <div class="fg"><label class="lbl">Vencimento</label><input type="date" class="inp" id="nfVenc"></div>
-      <div class="fg hidden" id="divParcelasNF"><label class="lbl">Parcelas</label><select class="sel" id="nfParcelas"><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="6">6x</option></select></div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;align-items:center;gap:13px;padding:11px;background:rgba(244,63,94,.04);border:1px dashed rgba(244,63,94,.25);border-radius:var(--r-md)">
-      <span style="font-family:var(--ff-mono);font-size:.64rem;color:var(--text-muted)">TOTAL NF:</span>
-      <span style="font-family:var(--ff-display);font-size:1.45rem;font-weight:800;color:var(--danger)">R$ <span id="nfTotal">0,00</span></span>
-    </div>
-  </div>
-  <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal('modalNF')">Cancelar</button><button class="btn btn-brand" id="btnSalvarNF" onclick="salvarNF()">FINALIZAR ENTRADA</button></div>
-</div>
-</div>
-
-<!-- MODAL FINANCEIRO -->
-<div class="overlay" id="modalFin">
-<div class="modal m-sm">
-  <div class="m-hd"><div class="m-title">💰 LANÇAMENTO FINANCEIRO</div><button class="m-close" onclick="closeModal('modalFin')">✕</button></div>
-  <div class="m-body">
-    <input type="hidden" id="finId">
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Tipo</label><select class="sel" id="finTipo"><option value="Entrada">💰 RECEITA</option><option value="Saída">💸 DESPESA</option></select></div>
-      <div class="fg"><label class="lbl">Valor (R$)</label><input type="number" step="0.01" class="inp mono" id="finValor" placeholder="0,00"></div>
-    </div>
-    <div class="fg"><label class="lbl">Descrição</label><input class="inp" id="finDesc" placeholder="Ex: Mensalidade software, Pagamento fornecedor..."></div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Vencimento</label><input type="date" class="inp" id="finVenc"></div>
-      <div class="fg"><label class="lbl">Forma de Pagamento</label><select class="sel" id="finPgto"><option>Dinheiro</option><option>PIX</option><option>Transferência</option><option>Cartão Débito</option><option>Cartão Crédito</option><option>Boleto</option></select></div>
-    </div>
-    <div class="fg"><label class="lbl">Status</label><select class="sel" id="finStatus"><option value="Pago">✅ Liquidado</option><option value="Pendente">⏳ Pendente</option></select></div>
-    <div class="fg"><label class="lbl">Nota Interna</label><textarea class="ta" id="finNota" rows="2" placeholder="Justificativa ou observação..."></textarea></div>
-  </div>
-  <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal('modalFin')">Cancelar</button><button class="btn btn-brand" onclick="salvarFin()">LANÇAR</button></div>
-</div>
-</div>
-
-<!-- MODAL FUNCIONÁRIO -->
-<div class="overlay" id="modalFunc">
-<div class="modal m-md">
-  <div class="m-hd"><div class="m-title">👷 COLABORADOR</div><button class="m-close" onclick="closeModal('modalFunc')">✕</button></div>
-  <div class="m-body">
-    <input type="hidden" id="funcId">
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Nome</label><input class="inp" id="funcNome" placeholder="Nome completo" autocomplete="name"></div>
-      <div class="fg"><label class="lbl">Cargo</label><select class="sel" id="funcCargo"><option value="mecanico">🔧 Mecânico</option><option value="eletricista">⚡ Eletricista</option><option value="funileiro">🔨 Funileiro</option><option value="pintor">🎨 Pintor</option><option value="borracheiro">⚙️ Borracheiro</option><option value="atendente">📞 Atendente</option><option value="gerente">📋 Gerente</option><option value="vendedor">💼 Vendedor</option></select></div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">% Comissão O.S.</label><input type="number" step="0.1" class="inp mono" id="funcComissao" placeholder="0" min="0" max="100"></div>
-      <div class="fg"><label class="lbl">WhatsApp</label><input type="tel" class="inp mono" id="funcWpp" placeholder="17999999999"></div>
-    </div>
-    <div class="divider"></div>
-    <div style="font-family:var(--ff-mono);font-size:.58rem;color:var(--brand);letter-spacing:.08em;margin-bottom:11px">🔑 CREDENCIAIS (equipe.html)</div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Usuário de Login</label><input class="inp mono" id="funcUser" placeholder="jose.mecanico" autocomplete="off"></div>
-      <div class="fg"><label class="lbl">Senha</label><input type="password" class="inp mono" id="funcPass" placeholder="••••••••"></div>
-    </div>
-  </div>
-  <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal('modalFunc')">Cancelar</button><button class="btn btn-brand" onclick="salvarFunc()">ADMITIR</button></div>
-</div>
-</div>
-
-<!-- MODAL FORNECEDOR -->
-<div class="overlay" id="modalFornec">
-<div class="modal m-sm">
-  <div class="m-hd"><div class="m-title">🏭 FORNECEDOR</div><button class="m-close" onclick="closeModal('modalFornec')">✕</button></div>
-  <div class="m-body">
-    <input type="hidden" id="fornecId">
-    <div class="fg"><label class="lbl">Razão Social / Nome</label><input class="inp" id="fornecNome" placeholder="Distribuidora ABC Ltda."></div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Segmento</label><input class="inp" id="fornecSeg" placeholder="Peças, Óleo, Elétrica..."></div>
-      <div class="fg"><label class="lbl">WhatsApp</label><input class="inp mono" id="fornecWpp" placeholder="17999..."></div>
-    </div>
-    <div class="fg"><label class="lbl">E-mail</label><input type="email" class="inp" id="fornecEmail" placeholder="contato@fornecedor.com"></div>
-  </div>
-  <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal('modalFornec')">Cancelar</button><button class="btn btn-brand" onclick="salvarFornec()">SALVAR</button></div>
-</div>
-</div>
-
-<!-- MODAL AGENDAMENTO -->
-<div class="overlay" id="modalAgenda">
-<div class="modal m-md">
-  <div class="m-hd"><div class="m-title">📅 AGENDAMENTO</div><button class="m-close" onclick="closeModal('modalAgenda')">✕</button></div>
-  <div class="m-body">
-    <input type="hidden" id="agdId">
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Cliente</label><select class="sel" id="agdCliente" onchange="filtrarVeicsAgenda()"></select></div>
-      <div class="fg"><label class="lbl">Veículo</label><select class="sel" id="agdVeiculo"></select></div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Data</label><input type="date" class="inp" id="agdData"></div>
-      <div class="fg"><label class="lbl">Hora</label><input type="time" class="inp" id="agdHora"></div>
-    </div>
-    <div class="fr fr2">
-      <div class="fg"><label class="lbl">Serviço / Motivo</label><input class="inp" id="agdServico" placeholder="Revisão, alinhamento, troca de óleo..."></div>
-      <div class="fg"><label class="lbl">Mecânico</label><select class="sel" id="agdMec"></select></div>
-    </div>
-  </div>
-  <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal('modalAgenda')">Cancelar</button><button class="btn btn-brand" onclick="salvarAgenda()">AGENDAR</button></div>
-</div>
-</div>
-
-<!-- ══════════════ SCRIPTS ══════════════ -->
-<script src="js/config.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/core.js"></script>
-<script src="js/os.js"></script>
-<script src="js/financeiro.js"></script>
-<script src="js/clientes.js"></script>
-<script src="js/ia.js"></script>
-<script src="js/pdf.js"></script>
-<script>
-'use strict';
-
-// ── MAPS ──
-window.SECTION_MAP = {
-  dashboard:'s-dashboard',agenda:'s-agenda',kanban:'s-kanban',
-  clientes:'s-clientes',estoque:'s-estoque',financeiro:'s-financeiro',
-  equipe:'s-equipe',chat:'s-chat',ia:'s-ia',auditoria:'s-auditoria'
-};
-window.TITLE_MAP = {
-  dashboard:'DASHBOARD',agenda:'AGENDA',kanban:'PÁTIO / O.S.',
-  clientes:'CLIENTES & VEÍCULOS',estoque:'ESTOQUE / NF',financeiro:'FINANCEIRO / DRE',
-  equipe:'EQUIPE & RH',chat:'CRM CHAT',ia:'thIAguinho IA',auditoria:'AUDITORIA'
-};
-
-// ── INIT ──
-document.addEventListener('DOMContentLoaded', () => {
-  initCore();
-  // Painel atenção
-  const pw = document.getElementById('painelWrap');
-  if (pw && ['admin','gestor','atendente'].includes(J.role)) pw.style.display = 'block';
-  // Sync badge chat → bottom nav
-  const obs = new MutationObserver(() => {
-    const b = document.getElementById('chatBadge');
-    const m = document.getElementById('chatBadgeMob');
-    if (b && m) { m.textContent = b.textContent; m.classList.toggle('show', b.classList.contains('show')); }
-  });
-  const cb = document.getElementById('chatBadge');
-  if (cb) obs.observe(cb, {attributes:true,childList:true,characterData:true});
-  // KPI extra interval
-  setInterval(() => {
-    const kA = document.getElementById('kAguard');
-    const kP = document.getElementById('kAprov');
-    if (kA) kA.textContent = J.os.filter(o => o.status === 'Aguardando').length;
-    if (kP) kP.textContent = J.os.filter(o => o.status === 'Aprovado').length;
-  }, 2500);
-});
-
-// ── NAV ──
-function navTo(key, el) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const sec = document.getElementById(SECTION_MAP[key]);
-  if (sec) sec.classList.add('active');
-  if (el) el.classList.add('active');
-  const t = document.getElementById('pageTitle');
-  if (t) t.textContent = TITLE_MAP[key] || key.toUpperCase();
-  document.querySelectorAll('.bn-item[data-sec]').forEach(b => b.classList.toggle('active', b.dataset.sec === key));
-  closeSB();
-}
-
-// ── SIDEBAR MOBILE ──
-function openSB() {
-  document.getElementById('sidebar').classList.add('open');
-  document.getElementById('sbBackdrop').classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-function closeSB() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sbBackdrop').classList.remove('show');
-  document.body.style.overflow = '';
-}
-(function(){
-  let sx = 0;
-  const sb = document.getElementById('sidebar');
-  if (!sb) return;
-  sb.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, {passive:true});
-  sb.addEventListener('touchend',   e => { if (e.changedTouches[0].clientX - sx < -60) closeSB(); }, {passive:true});
-})();
-
-// ── TABS ──
-window.switchTab = function(el, active, ...others) {
-  el.parentElement.querySelectorAll('.mtab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  const p = document.getElementById(active);
-  if (p) p.classList.add('active');
-  others.forEach(id => { const x = document.getElementById(id); if (x) x.classList.remove('active'); });
-};
-
-// ── MODAL ──
-window.openModal  = id => { const el = document.getElementById(id); if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; setTimeout(() => { const f = el.querySelector('input:not([type=hidden]),select,textarea'); if (f) f.focus(); }, 80); } };
-window.closeModal = id => { const el = document.getElementById(id); if (el) { el.classList.remove('open'); document.body.style.overflow = ''; } };
-document.addEventListener('click', e => { if (e.target.classList.contains('overlay')) { e.target.classList.remove('open'); document.body.style.overflow = ''; } });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.querySelectorAll('.overlay.open').forEach(el => { el.classList.remove('open'); }); document.body.style.overflow = ''; } });
-
-// ── BUSCA GLOBAL ──
-window.buscaGlobal = function(termo) {
-  const t = (termo || '').trim().toUpperCase();
-  const box = document.getElementById('buscaResults');
-  if (!box) return;
-  if (!t) { box.classList.add('hidden'); return; }
-  const SM = {Aguardando:'b-neutral',Orcamento:'b-warn',Aprovado:'b-brand',Andamento:'b-warn',Concluido:'b-success',Cancelado:'b-danger'};
-  const matches = J.os.filter(o => {
-    const v = J.veiculos.find(x => x.id === o.veiculoId);
-    const c = J.clientes.find(x => x.id === o.clienteId);
-    return v?.placa?.toUpperCase().includes(t) || c?.nome?.toUpperCase().includes(t);
-  }).sort((a,b) => (b.updatedAt||'') > (a.updatedAt||'') ? 1 : -1).slice(0, 8);
-  if (!matches.length) {
-    box.innerHTML = '<div style="padding:11px;color:var(--text-muted);font-size:.78rem;text-align:center">Nenhum resultado</div>';
-  } else {
-    box.innerHTML = matches.map(o => {
-      const v = J.veiculos.find(x => x.id === o.veiculoId);
-      const c = J.clientes.find(x => x.id === o.clienteId);
-      return `<div class="busca-item" onclick="_abrirOS('${o.id}')">
-        <div class="busca-placa">${v?.placa||'?'} <span class="badge ${SM[o.status]||'b-neutral'}" style="font-size:.48rem">${o.status}</span></div>
-        <div class="busca-info">${c?.nome||'—'} · ${v?.modelo||''}</div>
-      </div>`;
-    }).join('');
-  }
-  box.classList.remove('hidden');
-};
-window._abrirOS = function(osId) {
-  document.getElementById('buscaInput').value = '';
-  document.getElementById('buscaResults').classList.add('hidden');
-  prepOS('edit', osId);
-  openModal('modalOS');
-};
-document.addEventListener('click', e => {
-  const bw = document.getElementById('buscaWrap');
-  if (bw && !bw.contains(e.target)) document.getElementById('buscaResults').classList.add('hidden');
-});
-
-// ── PAINEL ATENÇÃO ──
-window.atualizarPainelAtencao = function() {
-  const cont = document.getElementById('painelAtencao'); if (!cont) return;
-  const defs = [
-    {key:'Aguardando',label:'⏳ AGUARDANDO MECÂNICO',cor:'var(--warn,#F59E0B)',bg:'rgba(245,158,11,.07)',brd:'rgba(245,158,11,.3)'},
-    {key:'Aprovado',  label:'✅ SERVIÇO AUTORIZADO', cor:'var(--success,#22D3A0)',bg:'rgba(34,211,160,.07)',brd:'rgba(34,211,160,.3)'}
-  ];
-  let temAlert = false;
-  cont.innerHTML = defs.map(d => {
-    const lista = J.os.filter(o => o.status === d.key);
-    if (lista.length) temAlert = true;
-    const items = lista.map(o => {
-      const v = J.veiculos.find(x => x.id === o.veiculoId);
-      const c = J.clientes.find(x => x.id === o.clienteId);
-      return `<div class="painel-item" onclick="_abrirOS('${o.id}')"><span class="painel-placa">${v?.placa||'?'}</span><span style="font-size:.66rem;color:var(--text-muted)">${c?.nome?.split(' ')[0]||'—'}</span></div>`;
-    }).join('');
-    return `<div class="painel-box" style="border-color:${d.brd};background:${d.bg}">
-      <div class="painel-lbl" style="color:${d.cor}">${d.label}</div>
-      <div class="painel-lista">${items||'<span style="color:var(--text-muted);font-size:.7rem">— Vazio —</span>'}</div>
-    </div>`;
-  }).join('');
-  const led = document.getElementById('alertLed');
-  if (led) led.style.display = temAlert ? 'block' : 'none';
-};
-
-// ── KANBAN COM MOVE BUTTONS + PRIORIDADE ──
-const _origRK = window.renderKanban;
-window.renderKanban = function() {
-  const busca = (_v('searchOS')||'').toLowerCase();
-  const filtN  = _v('filtroNichoKanban');
-  const statuses = ['Aguardando','Orcamento','Aprovado','Andamento','Concluido'];
-  const COR = {Aguardando:'var(--text-muted,#94A3B8)',Orcamento:'var(--warn,#F59E0B)',Aprovado:'var(--brand,#3B82F6)',Andamento:'#F97316',Concluido:'var(--success,#22D3A0)'};
-  const cols = {}, cnts = {};
-  statuses.forEach(s => { cols[s] = []; cnts[s] = 0; });
-
-  J.os.filter(o => o.status !== 'Cancelado').forEach(o => {
-    const v = J.veiculos.find(x => x.id === o.veiculoId);
-    const c = J.clientes.find(x => x.id === o.clienteId);
-    if (busca && !v?.placa?.toLowerCase().includes(busca) && !c?.nome?.toLowerCase().includes(busca)) return;
-    if (filtN && v?.tipo !== filtN) return;
-    if (cols[o.status]) { cols[o.status].push({os:o,v,c}); cnts[o.status]++; }
-  });
-
-  statuses.forEach(s => {
-    const cntEl = document.getElementById('cnt-'+s); if (cntEl) cntEl.textContent = cnts[s];
-    const colEl = document.getElementById('kb-'+s);  if (!colEl) return;
-    if (!cols[s].length) {
-      colEl.innerHTML = '<div class="empty-state" style="padding:18px 8px"><div class="empty-icon" style="font-size:1.1rem;opacity:.35">📭</div><div style="font-size:.66rem;color:var(--text-muted)">Vazio</div></div>';
-      return;
-    }
-    const po = {vermelho:0,amarelo:1,verde:2};
-    colEl.innerHTML = cols[s].sort((a,b) => {
-      const pa = po[a.os.prioridade]??3, pb = po[b.os.prioridade]??3;
-      return pa !== pb ? pa-pb : new Date(b.os.updatedAt||0)-new Date(a.os.updatedAt||0);
-    }).map(({os,v,c}) => {
-      const mec = J.equipe.find(f => f.id === os.mecId);
-      const cor = COR[os.status]||'var(--text-muted)';
-      const idx = statuses.indexOf(os.status);
-      const btnPrev = idx>0 ? `<button class="k-btn" onclick="event.stopPropagation();_mvOS('${os.id}','${statuses[idx-1]}')" title="Voltar">‹</button>` : '';
-      const btnNext = idx<statuses.length-1 ? `<button class="k-btn" onclick="event.stopPropagation();_mvOS('${os.id}','${statuses[idx+1]}')" title="Avançar">›</button>` : '';
-      const prioDot = os.prioridade && os.prioridade !== 'verde' ? `<div class="prio-dot ${os.prioridade}"></div>` : '';
-      return `<div class="k-card" style="border-left-color:${cor}" onclick="prepOS('edit','${os.id}');openModal('modalOS')">
-        ${prioDot}
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div style="flex:1;min-width:0;padding-right:${os.prioridade&&os.prioridade!=='verde'?'0':'46px'}">
-            <div class="k-placa">${v?.placa||'S/PLACA'}</div>
-            <div class="k-cli">${c?.nome||'—'}</div>
-          </div>
-          <div class="k-moves">${btnNext}${btnPrev}</div>
-        </div>
-        <div class="k-desc">${os.desc||'Sem descrição'}</div>
-        <div class="k-foot">
-          <span class="k-tipo ${v?.tipo||'carro'}">${{carro:'🚗 CARRO',moto:'🏍️ MOTO',bicicleta:'🚲 BIKE'}[v?.tipo]||'VEÍCULO'}</span>
-          <span class="k-date">${dtBr(os.data)}</span>
-        </div>
-        ${os.total ? `<div style="text-align:right;margin-top:5px;font-family:var(--ff-mono);font-size:.7rem;color:var(--success);font-weight:700">${moeda(os.total)}</div>` : ''}
-        ${mec ? `<div style="font-size:.64rem;color:var(--text-muted);margin-top:3px">🔧 ${mec.nome}</div>` : ''}
-      </div>`;
-    }).join('');
-  });
-  atualizarPainelAtencao();
-  // KPIs extra
-  const kA = document.getElementById('kAguard'); if (kA) kA.textContent = cnts.Aguardando||0;
-  const kP = document.getElementById('kAprov');  if (kP) kP.textContent = cnts.Aprovado||0;
-};
-
-// ── MOVE OS STATUS ──
-window._mvOS = async function(osId, novoStatus) {
-  const os = J.os.find(x => x.id === osId); if (!os) return;
-  const tl = [...(os.timeline||[])];
-  tl.push({dt:new Date().toISOString(),user:J.nome,acao:`Status: "${os.status}" → "${novoStatus}"`,tipo:'status'});
-  await J.db.collection('ordens_servico').doc(osId).update({status:novoStatus,updatedAt:new Date().toISOString(),timeline:tl});
-  audit('OS', `Moveu OS ${osId.slice(-6)} → ${novoStatus}`);
-};
-
-// ── PAINEL ATENÇÃO HOOK NO renderDashboard ──
-const _origRD = window.renderDashboard;
-window.renderDashboard = function() {
-  if (_origRD) _origRD();
-  atualizarPainelAtencao();
-  const kA = document.getElementById('kAguard'); if (kA) kA.textContent = J.os.filter(o=>o.status==='Aguardando').length;
-  const kP = document.getElementById('kAprov');  if (kP) kP.textContent = J.os.filter(o=>o.status==='Aprovado').length;
-};
-
-// ── TIMELINE RICA ──
-window.renderTimelineOS = function() {
-  const tl = JSON.parse(_v('osTimelineData')||'[]');
-  const el = document.getElementById('osTimeline'); if (!el) return;
-  if (!tl.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:.76rem;padding:7px 0">Sem registros ainda</div>'; return; }
-  const ic = {status:'🔄',log:'💬',valor:'💰',midia:'📷',km:'📍',sistema:'⚙️'};
-  el.innerHTML = [...tl].reverse().map((e,i) => {
-    const excl = (e.acao||'').startsWith('ATT EXCLUÍDA');
-    return `<div class="tl-item">
-      <div class="tl-icon">${ic[e.tipo||'log']||'💬'}</div>
-      <div class="tl-body">
-        <button class="tl-del" onclick="_delTL(${tl.length-1-i})">✕</button>
-        <div class="tl-meta"><span class="tl-user">${e.user||'—'}</span><span class="tl-date">${dtHrBr(e.dt)}</span></div>
-        <div class="tl-action" style="${excl?'color:var(--danger);font-style:italic':''}">${e.acao||''}</div>
-        ${e.pecas?`<div style="font-size:.7rem;color:var(--text-muted);margin-top:2px">Peças: ${e.pecas}</div>`:''}
-        ${e.valor?`<div style="font-family:var(--ff-mono);font-size:.72rem;color:var(--success);font-weight:700;margin-top:2px">${moeda(e.valor)}</div>`:''}
-      </div>
-    </div>`;
-  }).join('');
-};
-
-window._delTL = async function(idx) {
-  const osId = _v('osId'); if (!osId) return;
-  const os = J.os.find(x => x.id === osId); if (!os) return;
-  if (!confirm('Remover esta entrada da timeline?')) return;
-  const tl = [...(os.timeline||[])];
-  tl[idx] = {...tl[idx], acao:`ATT EXCLUÍDA POR: ${J.nome}`, tipo:'sistema'};
-  await J.db.collection('ordens_servico').doc(osId).update({timeline:tl,updatedAt:new Date().toISOString()});
-  _sv('osTimelineData', JSON.stringify(tl));
-  renderTimelineOS();
-  toastOk('Entrada removida');
-};
-
-// ── LOG RÁPIDO ──
-window.addLogTimeline = async function() {
-  const osId = _v('osId');
-  const desc = _v('logDescricao');
-  const pecs = _v('logPecas');
-  const val  = parseFloat(_v('logValor')||0);
-  if (!desc) { toastWarn('Descreva o serviço'); return; }
-  if (!osId) { toastWarn('Salve a O.S. primeiro'); return; }
-  const os = J.os.find(x => x.id === osId);
-  const tl = [...(os?.timeline||[])];
-  const entry = {dt:new Date().toISOString(),user:J.nome,tipo:val>0?'valor':'log',acao:desc};
-  if (pecs) entry.pecas = pecs;
-  if (val > 0) entry.valor = val;
-  tl.push(entry);
-  await J.db.collection('ordens_servico').doc(osId).update({timeline:tl,updatedAt:new Date().toISOString()});
-  _sv('logDescricao',''); _sv('logPecas',''); _sv('logValor','');
-  toastOk('Registro adicionado!');
-  document.getElementById('postLogActions').style.display = 'block';
-};
-
-window._moveNext = async function() {
-  const osId = _v('osId'); const os = J.os.find(x => x.id === osId); if (!os) return;
-  const st = ['Aguardando','Orcamento','Aprovado','Andamento','Concluido'];
-  const i = st.indexOf(os.status);
-  if (i < st.length-1) await _mvOS(osId, st[i+1]);
-  document.getElementById('postLogActions').style.display = 'none';
-  closeModal('modalOS');
-};
-window._movePrev = async function() {
-  const osId = _v('osId'); const os = J.os.find(x => x.id === osId); if (!os) return;
-  const st = ['Aguardando','Orcamento','Aprovado','Andamento','Concluido'];
-  const i = st.indexOf(os.status);
-  if (i > 0) await _mvOS(osId, st[i-1]);
-  document.getElementById('postLogActions').style.display = 'none';
-  closeModal('modalOS');
-};
-
-// ── UPLOAD CÂMERA / GALERIA ──
-window._openCamera  = () => { const el = document.getElementById('osCameraInput'); if (el) { el.value=''; el.click(); } };
-window._openGallery = () => { const el = document.getElementById('osFileInput');   if (el) { el.value=''; el.removeAttribute('capture'); el.click(); } };
-document.getElementById('osCameraInput')?.addEventListener('change', function() {
-  if (!this.files.length) return;
-  try { const dt = new DataTransfer(); dt.items.add(this.files[0]); document.getElementById('osFileInput').files = dt.files; } catch(e){}
-});
-
-// ── LIGHTBOX ──
-window._lbMedia = []; window._lbIdx = 0;
-const _origRMOS = window.renderMediaOS;
-window.renderMediaOS = function() {
-  const media = JSON.parse(_v('osMediaArray')||'[]');
-  window._lbMedia = media;
-  if (!media.length) { _sh('osMediaGrid','<div style="color:var(--text-muted);font-size:.76rem;padding:14px 0">Nenhum arquivo</div>'); return; }
-  _sh('osMediaGrid', media.map((m,i) => `
-    <div class="media-item" title="${m.name||''}">
-      ${m.type==='video'
-        ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--surf-3);font-size:1.8rem;cursor:pointer" onclick="_lbOpen(${i})">▶</div>`
-        : `<img src="${m.url}" loading="lazy" referrerpolicy="no-referrer" style="cursor:zoom-in" onclick="_lbOpen(${i})" onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;height:100%;justify-content:center;color:var(--text-muted);font-size:.66rem\\'padding:4px\\'>Indisponível</div>'">`
-      }
-      <button class="media-del" onclick="_rmMedia(${i})">✕</button>
-    </div>
-  `).join(''));
-};
-
-window._lbOpen = function(idx) {
-  const m = window._lbMedia[idx]; if (!m) return;
-  window._lbIdx = idx;
-  const lc = document.getElementById('lb-content');
-  lc.innerHTML = m.type==='video'
-    ? `<video src="${m.url}" controls style="max-width:100%;max-height:80dvh"></video>`
-    : `<img src="${m.url}" referrerpolicy="no-referrer" style="max-width:100%;max-height:80dvh;object-fit:contain">`;
-  document.getElementById('lb-prev').style.display = idx>0 ? 'flex' : 'none';
-  document.getElementById('lb-next').style.display = idx<window._lbMedia.length-1 ? 'flex' : 'none';
-  const dl = document.getElementById('lb-dl'); if (dl) { dl.href=m.url; dl.download=m.name||`media_${idx}`; }
-  const lb = document.getElementById('lightbox'); lb.classList.remove('hidden');
-};
-window._lbNav   = d => { const i=window._lbIdx+d; if(i>=0&&i<window._lbMedia.length) _lbOpen(i); };
-window._lbClose = () => document.getElementById('lightbox').classList.add('hidden');
-window._lbCopy  = () => { const m=window._lbMedia[window._lbIdx]; if(m?.url) navigator.clipboard.writeText(m.url).then(()=>toastOk('URL copiada!')); };
-
-// ── CHAT CRM ──
-window.renderChatLista = function() {
-  const cont = document.getElementById('chatLista'); if (!cont) return;
-  if (!J.clientes.length) { cont.innerHTML='<div class="empty-state" style="padding:20px"><div class="empty-icon">💬</div><div class="empty-title">Nenhum cliente</div></div>'; return; }
-  cont.innerHTML = J.clientes.map(c => {
-    const msgs  = J.mensagens.filter(m=>m.clienteId===c.id);
-    const last  = msgs[msgs.length-1];
-    const unread= msgs.filter(m=>m.sender==='cliente'&&!m.lidaAdmin).length;
-    return `<div class="chat-item ${J.chatAtivo===c.id?'active':''}" onclick="abrirChat('${c.id}','${c.nome}')">
-      <div class="chat-item-name">${c.nome} ${unread>0?`<span class="chat-unread">${unread}</span>`:''}</div>
-      <div class="chat-item-last">${last?.msg||'Sem mensagens'}</div>
-    </div>`;
-  }).join('');
-};
-window.abrirChat = function(cid, nome) {
-  J.chatAtivo = cid;
-  const hd = document.getElementById('chatHead'); if (hd) hd.textContent = nome;
-  const ft = document.getElementById('chatFoot'); if (ft) ft.style.display = 'flex';
-  renderChatMsgs(cid);
-  J.mensagens.filter(m=>m.clienteId===cid&&m.sender==='cliente'&&!m.lidaAdmin).forEach(m=>J.db.collection('mensagens').doc(m.id).update({lidaAdmin:true}));
-};
-window.renderChatMsgs = function(cid) {
-  const cont = document.getElementById('chatMsgs'); if (!cont) return;
-  const msgs = J.mensagens.filter(m=>m.clienteId===cid);
-  if (!msgs.length) { cont.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><div style="font-size:.78rem;color:var(--text-muted)">Sem mensagens</div></div>'; return; }
-  cont.innerHTML = msgs.map(m=>{
-    const t = m.ts?new Date(m.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
-    return `<div class="chat-msg ${m.sender==='admin'?'admin':'cliente'}">${m.msg}<div class="chat-ts">${t}</div></div>`;
-  }).join('');
-  cont.scrollTop = cont.scrollHeight;
-};
-window.enviarChat = function() {
-  const msg = _v('chatInput'); if (!msg||!J.chatAtivo) return;
-  J.db.collection('mensagens').add({tenantId:J.tid,clienteId:J.chatAtivo,sender:'admin',msg,lidaCliente:false,lidaAdmin:true,ts:Date.now()});
-  _sv('chatInput','');
-};
-document.getElementById('chatInput')?.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviarChat();} });
-document.getElementById('iaInput')?.addEventListener('keydown',   e => { if(e.key==='Enter') iaPerguntar(); });
-
-// ── NF ROWS RESPONSIVOS ──
-window.adicionarItemNF = function() {
-  const div = document.createElement('div');
-  div.className = 'nf-row';
-  div.innerHTML = `
-    <input class="inp" placeholder="Descrição do item" oninput="_sugerirPecaNF(this)">
-    <input type="number" class="inp" value="1" min="1" oninput="calcNFTotal()">
-    <input type="number" class="inp peca-custo" value="0" step="0.01" placeholder="Custo" oninput="calcNFTotal()">
-    <input type="number" class="inp" value="0" step="0.01" placeholder="Venda" oninput="calcNFTotal()">
-    <button type="button" class="btn btn-danger btn-icon" onclick="this.closest('.nf-row').remove();calcNFTotal()">✕</button>
-  `;
-  document.getElementById('containerItensNF').appendChild(div);
-};
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script src="js/config.js"></script>    <script src="js/core.js"></script>      <script src="js/ui.js"></script>        <script src="js/clientes.js"></script>  <script src="js/os.js"></script>        <script src="js/financeiro.js"></script><script src="js/ia.js"></script>        <script src="js/pdf.js"></script>       <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verifica se as variáveis de sessão existem. Se não, no core.js ele expulsa para o index.html
+            if(window.core && typeof core.init === 'function') {
+                core.init();
+            }
+        });
+    </script>
 </body>
 </html>
