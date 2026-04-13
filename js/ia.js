@@ -1,312 +1,368 @@
 /**
- * JARVIS ERP — ia.js / chat.js
- * Gemini RAG + Chat CRM admin↔cliente + Chat equipe↔admin
+ * ERP MASTER - MÓDULO DE INTELIGÊNCIA ARTIFICIAL (J.A.R.V.I.S / RAG)
+ * Responsável por: Comunicação com Google Gemini, Injeção de Contexto da Oficina e Ditado por Voz.
  */
 
-'use strict';
+window.ia = {
+    // ATENÇÃO: Num ambiente de produção real, esta chave deve vir do backend. 
+    // Para a nossa arquitetura SaaS Front-end, vamos armazená-la no documento do Tenant.
+    // Aqui usamos uma constante para facilitar a tua implementação inicial.
+    GEMINI_API_KEY: "COLOQUE_AQUI_A_SUA_CHAVE_GEMINI", 
+    
+    chatHistory: [], // Mantém o histórico da conversa atual
+    contextoOficina: "", // Guarda o resumo do pátio e manuais
 
-// ============================================================
-// GEMINI IA
-// ============================================================
-let _iaHistorico = [];
+    /**
+     * Inicializa o Módulo de IA
+     */
+    init: function() {
+        console.log("[I.A.] Módulo de Inteligência Artificial Iniciado.");
+        setTimeout(() => {
+            if (window.core && window.core.session.tenantId) {
+                this.prepararMenteIA();
+            }
+        }, 2000); // Aguarda 2s para não sobrecarregar o arranque do sistema
+    },
 
-window.iaPerguntar = async function() {
-  const inp = _$('iaInput');
-  const msg = inp ? inp.value.trim() : '';
-  if (!msg) return;
-  inp.value = '';
+    /**
+     * Constrói a "Mente" da IA: Recolhe os dados do Pátio e os Manuais do Firebase
+     */
+    prepararMenteIA: async function() {
+        const tenantId = window.core.session.tenantId;
+        let baseConhecimento = "";
+        let resumoPatio = "";
 
-  _adicionarMsgIA('user', msg);
-  _adicionarMsgIA('bot', '<span style="color:var(--text-muted)">⏳ Analisando dados da oficina...</span>', true);
+        try {
+            // 1. Vai buscar a Base de Conhecimento (Manuais, Dicas, PDFs lidos)
+            const docsConhecimento = await db.collection("tenants").doc(tenantId).collection("conhecimento_ia").get();
+            docsConhecimento.forEach(doc => {
+                baseConhecimento += `\n[MANUAL: ${doc.data().titulo}] - ${doc.data().conteudo}`;
+            });
 
-  const key = J.gemini;
-  if (!key) {
-    _iaMsgsRemoveLast();
-    _adicionarMsgIA('bot', '⚠️ Configure a API Key do Gemini no painel do Superadmin.');
-    return;
-  }
+            // 2. Vai buscar um resumo dos carros que estão no pátio atualmente
+            const docsPatio = await db.collection("tenants").doc(tenantId).collection("ordens_servico")
+                .where("status", "!=", "entregue").get();
+            
+            docsPatio.forEach(doc => {
+                const os = doc.data();
+                resumoPatio += `\n- Placa: ${os.placa} | Veículo: ${os.veiculo} | Status: ${os.status} | Queixa: ${os.queixa}`;
+            });
 
-  // RAG — contexto da oficina
-  const ctx = _buildContext();
-  const systemPrompt = `Você é o assistente de IA da oficina "${J.tnome}", especializado em gestão automotiva.
+            // Monta o Contexto Final que será enviado invisivelmente para a API
+            this.contextoOficina = `
+                --- BASE DE CONHECIMENTO TÉCNICO DA OFICINA ---
+                ${baseConhecimento ? baseConhecimento : "Nenhum manual técnico injetado ainda."}
 
-DADOS DA OFICINA AGORA:
-${ctx}
+                --- VEÍCULOS ATUALMENTE NO PÁTIO ---
+                ${resumoPatio ? resumoPatio : "O pátio está vazio neste momento."}
+            `;
 
-REGRAS:
-- Responda sempre em português brasileiro
-- Seja direto, técnico e útil
-- Nunca invente dados — baseie-se apenas nos dados fornecidos
-- Ao mencionar valores, use o formato R$ X.XXX,XX
-- Para placas de veículos, destaque em negrito`;
+            console.log("[I.A.] Mente preparada com o contexto da oficina.");
 
-  _iaHistorico.push({ role: 'user', text: msg });
+            // Constrói a interface de Chat na secção correspondente
+            this.renderizarInterfaceChat();
 
-  const MODELOS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-
-  for (const modelo of MODELOS) {
-    try {
-      const contents = _iaHistorico.map(h => ({
-        role:  h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: h.text }]
-      }));
-
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${key}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents,
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
-          })
+        } catch (error) {
+            console.error("[I.A.] Erro ao preparar mente da IA:", error);
         }
-      );
+    },
 
-      if (res.status === 429) {
-        _iaMsgsRemoveLast();
-        _adicionarMsgIA('bot', '⚠️ Limite de uso da API atingido. Aguarde 1 minuto e tente novamente.');
-        return;
-      }
+    /**
+     * Constrói o HTML do Chat dentro da secção "sec-ia"
+     */
+    renderizarInterfaceChat: function() {
+        const container = document.getElementById("sec-ia");
+        if (!container) return;
 
-      const data = await res.json();
-      if (!res.ok) {
-        if (modelo === MODELOS[MODELOS.length - 1]) throw new Error(data.error?.message || 'Erro na API');
-        continue;
-      }
+        container.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h4 class="text-white fw-bold mb-0"><i class="bi bi-robot text-info"></i> Consultor J.A.R.V.I.S</h4>
+                    <p class="text-white-50 small mb-0">Especialista Técnico Automotivo baseado no Google Gemini.</p>
+                </div>
+                <button class="btn btn-outline-warning btn-sm gestao-only" onclick="ia.abrirModalTreinamento()">
+                    <i class="bi bi-database-add"></i> Ensinar Manuais (RAG)
+                </button>
+            </div>
 
-      const resposta = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta.';
-      _iaHistorico.push({ role: 'model', text: resposta });
-      _iaMsgsRemoveLast();
-      _adicionarMsgIA('bot', _formatarRespIA(resposta));
-      return;
+            <div class="card bg-black border-secondary flex-grow-1 d-flex flex-column">
+                <div class="card-body overflow-y-auto" id="ia-chat-box" style="height: 400px; scroll-behavior: smooth;">
+                    <div class="d-flex mb-3">
+                        <div class="bg-dark border border-info rounded-3 p-3 ms-auto w-75">
+                            <strong class="text-info"><i class="bi bi-cpu"></i> J.A.R.V.I.S</strong>
+                            <p class="mb-0 text-white mt-1">Olá, ${window.core.session.nome}! A minha base de dados está atualizada com os veículos do nosso pátio. Pode perguntar-me sobre binários de aperto, esquemas elétricos ou pedir conselhos de gestão da oficina. Em que posso ajudar?</p>
+                        </div>
+                    </div>
+                </div>
 
-    } catch (e) {
-      if (modelo === MODELOS[MODELOS.length - 1]) {
-        _iaMsgsRemoveLast();
-        _adicionarMsgIA('bot', `⚠️ Erro: ${e.message}`);
-      }
+                <div class="card-footer bg-darker border-secondary p-3">
+                    <div class="input-group">
+                        <button class="btn btn-danger" type="button" onclick="ia.ouvirMicrofone()" id="btn-ia-mic" title="Ditar Pergunta">
+                            <i class="bi bi-mic-fill"></i>
+                        </button>
+                        <input type="text" class="form-control bg-black text-white border-secondary" id="ia-input-msg" placeholder="Escreva a sua dúvida técnica aqui..." onkeypress="if(event.key === 'Enter') ia.enviarMensagem()">
+                        <button class="btn btn-info fw-bold" type="button" onclick="ia.enviarMensagem()" id="btn-ia-enviar">
+                            <i class="bi bi-send-fill"></i> Enviar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal fade" id="modal-treinar-ia" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content bg-dark border-warning">
+                        <div class="modal-header bg-black border-secondary">
+                            <h5 class="modal-title text-warning fw-bold"><i class="bi bi-brain"></i> Injetar Conhecimento (RAG)</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <p class="text-white-50 small">Cole aqui textos de manuais de reparação (ex: Tabela de binários da Correia Dentada do motor TSI). A IA vai ler e memorizar esta informação para usar nas próximas respostas da equipa.</p>
+                            <input type="text" id="ia-titulo-manual" class="form-control bg-black text-white border-secondary mb-3" placeholder="Título. Ex: Ponto do Motor VW EA211">
+                            <textarea id="ia-texto-manual" class="form-control bg-black text-white border-secondary" rows="8" placeholder="Cole o texto técnico do manual aqui..."></textarea>
+                        </div>
+                        <div class="modal-footer bg-black border-secondary">
+                            <button type="button" class="btn btn-warning fw-bold text-dark w-100" onclick="ia.salvarConhecimento()"><i class="bi bi-save"></i> Guardar na Memória da Oficina</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Limpa o histórico de chat ao carregar a interface
+        this.chatHistory = [];
+        this.adicionarPromptMestreAoHistorico();
+    },
+
+    /**
+     * O "Prompt Mestre" - Define a personalidade e as regras rigorosas da IA
+     */
+    adicionarPromptMestreAoHistorico: function() {
+        const promptMestre = `
+            És o J.A.R.V.I.S, a Autoridade Técnica Suprema deste ERP de Gestão de Oficinas Automóveis.
+            
+            A TUA IDENTIDADE (Protocolo Camaleão):
+            1. [O ENGENHEIRO]: Dominas a física, química e eletrónica. Conheces torques, diagramas e esquemas elétricos.
+            2. [O MESTRE DE OFICINA]: Tens 30 anos de experiência com "graxa na mão". Sabes que o scanner mente às vezes e dás dicas de ouro.
+            3. [O GESTOR/DONO]: Focado em lucro. Detestas retorno em garantia. Recomendas sempre peças originais ou de primeira linha para evitar dor de cabeça.
+            4. [O CONSULTOR]: Sabes explicar problemas complexos para um cliente leigo aprovar o orçamento.
+
+            INSTRUÇÕES CRÍTICAS:
+            - Nunca inventes informações que não saibas (Alucinação zero).
+            - Baseia-te SEMPRE no contexto da oficina fornecido abaixo para responder sobre carros que estão na oficina.
+            - Responde com formatação em HTML básico (uso de <b>, <br>, <ul>, <li>) para que a interface consiga ler de forma bonita. Nada de Markdown (***).
+
+            AQUI ESTÁ O TEU CONTEXTO REAL NESTE MOMENTO (Lê com atenção):
+            ${this.contextoOficina}
+        `;
+
+        // O Gemini exige formato de roles: "user" e "model"
+        this.chatHistory.push({
+            role: "user",
+            parts: [{ text: promptMestre }]
+        });
+        
+        // Simula que a IA aceitou as regras
+        this.chatHistory.push({
+            role: "model",
+            parts: [{ text: "Entendido. Protocolo Camaleão ativo e Contexto RAG carregado. Aguardando comandos da equipa técnica." }]
+        });
+    },
+
+    /**
+     * Processa a mensagem do utilizador e envia para a API
+     */
+    enviarMensagem: async function() {
+        const input = document.getElementById("ia-input-msg");
+        const texto = input.value.trim();
+        const btnEnviar = document.getElementById("btn-ia-enviar");
+
+        if (!texto) return;
+
+        // 1. Adiciona a pergunta do utilizador no ecrã
+        this.desenharBalao(texto, 'user');
+        input.value = "";
+        
+        // 2. Bloqueia os botões enquanto pensa
+        input.disabled = true;
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '<i class="bi bi-arrow-repeat spin-icon"></i> Pensando...';
+
+        // 3. Adiciona a pergunta ao histórico lógico
+        this.chatHistory.push({
+            role: "user",
+            parts: [{ text: texto }]
+        });
+
+        // 4. Chama a API do Google Gemini
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${this.GEMINI_API_KEY}`;
+            
+            const resposta = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: this.chatHistory })
+            });
+
+            const dados = await resposta.json();
+
+            if (dados.error) {
+                throw new Error(dados.error.message);
+            }
+
+            const textoIA = dados.candidates[0].content.parts[0].text;
+            
+            // 5. Adiciona a resposta da IA ao histórico lógico
+            this.chatHistory.push({
+                role: "model",
+                parts: [{ text: textoIA }]
+            });
+
+            // 6. Desenha a resposta no ecrã
+            this.desenharBalao(textoIA, 'ia');
+
+        } catch (error) {
+            console.error("[I.A.] Erro na API Gemini:", error);
+            this.desenharBalao("Desculpe, ocorreu uma falha de comunicação com o satélite (API). Verifique a chave do Gemini ou a ligação à internet.", 'erro');
+        } finally {
+            // 7. Restaura a interface
+            input.disabled = false;
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = '<i class="bi bi-send-fill"></i> Enviar';
+            input.focus();
+        }
+    },
+
+    /**
+     * Desenha os balões de conversa no ecrã
+     */
+    desenharBalao: function(texto, quem) {
+        const chatBox = document.getElementById("ia-chat-box");
+        let htmlBalao = "";
+
+        if (quem === 'user') {
+            htmlBalao = `
+                <div class="d-flex mb-3">
+                    <div class="bg-primary bg-opacity-25 border border-primary rounded-3 p-3 w-75">
+                        <strong class="text-primary"><i class="bi bi-person"></i> ${window.core.session.nome}</strong>
+                        <p class="mb-0 text-white mt-1">${texto}</p>
+                    </div>
+                </div>
+            `;
+        } else if (quem === 'ia') {
+            // Formata o texto Markdown (que o Gemini costuma enviar mesmo pedindo HTML) para HTML básico
+            let textoFormatado = texto.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // Negrito
+                                      .replace(/\*(.*?)\*/g, '<i>$1</i>')     // Itálico
+                                      .replace(/\n/g, '<br>');                // Quebras de linha
+
+            htmlBalao = `
+                <div class="d-flex mb-3">
+                    <div class="bg-dark border border-info rounded-3 p-3 ms-auto w-75 shadow">
+                        <strong class="text-info"><i class="bi bi-cpu"></i> J.A.R.V.I.S</strong>
+                        <p class="mb-0 text-light mt-2" style="line-height: 1.6;">${textoFormatado}</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Erro
+            htmlBalao = `
+                <div class="d-flex mb-3 text-center w-100 justify-content-center">
+                    <span class="badge bg-danger p-2"><i class="bi bi-exclamation-triangle"></i> ${texto}</span>
+                </div>
+            `;
+        }
+
+        chatBox.insertAdjacentHTML('beforeend', htmlBalao);
+        chatBox.scrollTop = chatBox.scrollHeight; // Faz scroll para o fundo automaticamente
+    },
+
+    /**
+     * Reconhecimento de Voz Nativo para o Chat (Push-to-Talk)
+     */
+    ouvirMicrofone: function() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            window.ui.mostrarToast("Erro", "Reconhecimento de voz não suportado neste navegador.", "danger");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'pt-PT'; // Adaptado para Português de Portugal
+        const btnMic = document.getElementById("btn-ia-mic");
+        const input = document.getElementById("ia-input-msg");
+
+        btnMic.classList.replace("btn-danger", "btn-warning");
+        input.placeholder = "A ouvir a sua voz...";
+
+        recognition.start();
+
+        recognition.onresult = (event) => {
+            const transcricao = event.results[0][0].transcript;
+            input.value = transcricao;
+        };
+
+        recognition.onend = () => {
+            btnMic.classList.replace("btn-warning", "btn-danger");
+            input.placeholder = "Escreva a sua dúvida técnica aqui...";
+            if (input.value) {
+                this.enviarMensagem(); // Envia automaticamente após parar de falar
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error("[I.A.] Erro no microfone:", event.error);
+            btnMic.classList.replace("btn-warning", "btn-danger");
+            window.ui.mostrarToast("Atenção", "Não consegui ouvir o seu áudio.", "warning");
+        };
+    },
+
+    /**
+     * ================= RAG: ALIMENTAR A BASE DE DADOS =================
+     */
+    abrirModalTreinamento: function() {
+        const modal = new bootstrap.Modal(document.getElementById('modal-treinar-ia'));
+        modal.show();
+    },
+
+    salvarConhecimento: async function() {
+        const titulo = document.getElementById("ia-titulo-manual").value.trim();
+        const texto = document.getElementById("ia-texto-manual").value.trim();
+        const tenantId = window.core.session.tenantId;
+
+        if (!titulo || !texto) {
+            window.ui.mostrarToast("Atenção", "Título e Texto são obrigatórios para ensinar a IA.", "warning");
+            return;
+        }
+
+        try {
+            await db.collection("tenants").doc(tenantId).collection("conhecimento_ia").add({
+                titulo: titulo,
+                conteudo: texto,
+                dataInjecao: firebase.firestore.FieldValue.serverTimestamp(),
+                inseridoPor: window.core.session.nome
+            });
+
+            window.ui.mostrarToast("Sucesso", "Conhecimento injetado no Cérebro do J.A.R.V.I.S!", "success");
+            
+            // Recarrega a mente da IA para incluir o novo manual
+            this.prepararMenteIA();
+
+            const modalEl = document.getElementById('modal-treinar-ia');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            document.getElementById("ia-titulo-manual").value = "";
+            document.getElementById("ia-texto-manual").value = "";
+
+        } catch (error) {
+            console.error("[I.A.] Erro ao guardar conhecimento:", error);
+            window.ui.mostrarToast("Erro", "Falha ao gravar na memória.", "danger");
+        }
     }
-  }
 };
 
-window.iaAnalisarDRE = async function() {
-  _sv('iaInput', 'Analise o financeiro atual da oficina. Quais são as principais fontes de receita, as maiores despesas, e qual a saúde geral do caixa? Dê sugestões práticas de melhoria.');
-  if (_$('iaInput')) _$('iaInput').dispatchEvent(new Event('input'));
-  await iaPerguntar();
-};
-
-window.iaAnalisarEstoque = async function() {
-  _sv('iaInput', 'Analise o estoque atual. Quais itens estão críticos (abaixo do mínimo)? Quais têm maior giro? Recomende o que comprar com prioridade.');
-  await iaPerguntar();
-};
-
-window.iaDiagnosticarPlaca = async function(placa) {
-  _sv('iaInput', `Mostre o histórico completo de serviços da placa ${placa}. Há algum serviço vencido ou que deva ser feito em breve?`);
-  await iaPerguntar();
-};
-
-function _buildContext() {
-  const agora = new Date();
-  const mes   = agora.getMonth(), ano = agora.getFullYear();
-
-  const fatMes = J.os
-    .filter(o => o.status === 'Concluido' && o.updatedAt)
-    .reduce((acc, o) => {
-      const d = new Date(o.updatedAt);
-      return (d.getMonth() === mes && d.getFullYear() === ano) ? acc + (o.total || 0) : acc;
-    }, 0);
-
-  const osAbertas = J.os.filter(o => !['Concluido','Cancelado'].includes(o.status));
-  const pecasCrit = J.estoque.filter(p => (p.qtd || 0) <= (p.min || 0));
-
-  const osDetalhes = J.os.slice(-15).map(o => {
-    const v = J.veiculos.find(x => x.id === o.veiculoId);
-    const c = J.clientes.find(x => x.id === o.clienteId);
-    return `- Placa: **${v?.placa || '?'}** | Cliente: ${c?.nome || '?'} | Serviço: ${o.desc || '?'} | Status: ${o.status} | Data: ${dtBr(o.data)} | Valor: ${moeda(o.total)}`;
-  }).join('\n');
-
-  return `
-Oficina: ${J.tnome} | Nicho: ${J.nicho}
-Mecânicos: ${J.equipe.map(f => f.nome).join(', ') || 'nenhum'}
-Clientes cadastrados: ${J.clientes.length}
-Veículos cadastrados: ${J.veiculos.length}
-O.S. abertas no momento: ${osAbertas.length}
-Peças com estoque crítico: ${pecasCrit.map(p => p.desc).join(', ') || 'nenhuma'}
-Faturamento do mês atual: ${moeda(fatMes)}
-
-ÚLTIMAS 15 O.S.:
-${osDetalhes || 'Nenhuma O.S. registrada'}
-  `.trim();
-}
-
-function _formatarRespIA(text) {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n- /g, '<br>• ')
-    .replace(/\n/g, '<br>');
-}
-
-function _adicionarMsgIA(role, html, temp = false) {
-  const container = _$('iaMsgs');
-  if (!container) return;
-  const div = document.createElement('div');
-  div.className = `ia-msg ${role}`;
-  if (temp) div.dataset.temp = '1';
-  if (role === 'bot') {
-    div.innerHTML = `<strong style="color:var(--brand);font-size:0.72rem;display:block;margin-bottom:4px">✦ IA</strong>${html}`;
-  } else {
-    div.innerHTML = html;
-  }
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-}
-
-function _iaMsgsRemoveLast() {
-  const container = _$('iaMsgs');
-  if (!container) return;
-  const temp = container.querySelector('[data-temp="1"]');
-  if (temp) temp.remove();
-}
-
-// Enter no input da IA
+// Auto-Init
 document.addEventListener('DOMContentLoaded', () => {
-  const iaInput = _$('iaInput');
-  if (iaInput) iaInput.addEventListener('keydown', e => { if (e.key === 'Enter') iaPerguntar(); });
-});
-
-// ============================================================
-// CHAT CRM (admin ↔ cliente)
-// ============================================================
-window.renderChatLista = function() {
-  const container = _$('chatLista');
-  if (!container) return;
-
-  if (!J.clientes.length) {
-    container.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-state-icon">💬</div><div class="empty-state-sub">Nenhum cliente cadastrado</div></div>`;
-    return;
-  }
-
-  container.innerHTML = J.clientes.map(c => {
-    const msgs     = J.mensagens.filter(m => m.clienteId === c.id);
-    const ultima   = msgs[msgs.length - 1];
-    const naoLidas = msgs.filter(m => m.sender === 'cliente' && !m.lidaAdmin).length;
-    const isAtivo  = J.chatAtivo === c.id;
-    return `
-      <div class="chat-contact ${isAtivo ? 'active' : ''}" onclick="abrirChatCRM('${c.id}','${c.nome}')">
-        <div class="chat-contact-name">
-          ${c.nome}
-          ${naoLidas > 0 ? `<span class="chat-unread">${naoLidas}</span>` : ''}
-        </div>
-        <div class="chat-contact-last">${ultima?.msg || 'Sem mensagens'}</div>
-      </div>
-    `;
-  }).join('');
-};
-
-window.abrirChatCRM = function(cid, nome) {
-  J.chatAtivo = cid;
-  const head = _$('chatMainHeader');
-  if (head) head.textContent = nome;
-  const foot = _$('chatFoot');
-  if (foot) foot.style.display = 'flex';
-  renderChatMsgs(cid);
-
-  // Marcar como lidas
-  J.mensagens
-    .filter(m => m.clienteId === cid && m.sender === 'cliente' && !m.lidaAdmin)
-    .forEach(m => J.db.collection('mensagens').doc(m.id).update({ lidaAdmin: true }));
-};
-
-window.renderChatMsgs = function(cid) {
-  const container = _$('chatMessages');
-  if (!container) return;
-  const msgs = J.mensagens.filter(m => m.clienteId === cid);
-
-  if (!msgs.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-sub">Sem mensagens com este cliente</div></div>`;
-    return;
-  }
-
-  container.innerHTML = msgs.map(m => {
-    const t   = m.ts ? new Date(m.ts).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '';
-    const dir = m.sender === 'admin' ? 'outgoing' : 'incoming';
-    return `<div class="chat-msg ${dir}">${m.msg}<div class="msg-time">${t}</div></div>`;
-  }).join('');
-  container.scrollTop = container.scrollHeight;
-};
-
-window.enviarChatCRM = async function() {
-  const msg = _v('chatInputCRM');
-  if (!msg || !J.chatAtivo) return;
-  await J.db.collection('mensagens').add({
-    tenantId:    J.tid,
-    clienteId:   J.chatAtivo,
-    sender:      'admin',
-    msg,
-    lidaCliente: false,
-    lidaAdmin:   true,
-    ts:          Date.now()
-  });
-  _sv('chatInputCRM', '');
-};
-
-// Enter no chat CRM
-document.addEventListener('DOMContentLoaded', () => {
-  const el = _$('chatInputCRM');
-  if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarChatCRM(); } });
-});
-
-// ============================================================
-// CHAT EQUIPE ↔ ADMIN (equipe.html)
-// ============================================================
-window.renderChatEquipe = function() {
-  const container = _$('chatMsgs');
-  if (!container) return;
-
-  if (!J.chatEquipe.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-sub">Sem mensagens ainda</div></div>`;
-    return;
-  }
-
-  container.innerHTML = J.chatEquipe.map(m => {
-    const t    = m.ts ? new Date(m.ts).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '';
-    const dir  = m.sender === 'equipe' ? 'outgoing' : 'incoming';
-    const nome = m.sender === 'equipe' ? J.nome : 'Admin';
-
-    // Marcar como lida
-    if (m.sender === 'admin' && !m.lidaEquipe && m.para === J.fid) {
-      J.db.collection('chat_equipe').doc(m.id).update({ lidaEquipe: true }).catch(() => {});
+    if (window.ia && typeof window.ia.init === 'function') {
+        window.ia.init();
     }
-
-    return `<div class="chat-msg ${dir}">
-      <strong style="font-size:0.65rem;color:${dir === 'outgoing' ? 'var(--brand)' : 'var(--text-secondary)'};display:block;margin-bottom:3px">${nome}</strong>
-      ${m.msg}
-      <div class="msg-time">${t}</div>
-    </div>`;
-  }).join('');
-
-  container.scrollTop = container.scrollHeight;
-};
-
-window.enviarMsgEquipe = async function() {
-  const msg = _v('chatInputEquipe');
-  if (!msg) return;
-  await J.db.collection('chat_equipe').add({
-    tenantId:   J.tid,
-    de:         J.fid,
-    para:       'admin',
-    sender:     'equipe',
-    msg,
-    lidaAdmin:  false,
-    lidaEquipe: true,
-    ts:         Date.now()
-  });
-  _sv('chatInputEquipe', '');
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-  const el = _$('chatInputEquipe');
-  if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMsgEquipe(); } });
 });
