@@ -1,315 +1,362 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-bs-theme="dark">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JARVIS ERP - Gestão Automotiva</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    
-    <link rel="stylesheet" href="css/design.css">
-
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>JARVIS ERP — Dashboard</title>
+  <link rel="stylesheet" href="css/design.css">
 </head>
-<body class="bg-darker text-light overflow-hidden">
+<body onload="initCore()">
+  <div id="toast-container"></div>
 
-    <div class="d-flex h-100 w-100">
-        
-        <nav class="sidebar bg-card border-end border-secondary d-flex flex-column" id="sidebar" style="width: 260px; transition: 0.3s; z-index: 1040; height: 100vh;">
-            <div class="p-4 border-bottom border-secondary text-center">
-                <i class="bi bi-car-front-fill fs-2 text-info"></i>
-                <h5 class="mt-2 fw-bold text-white mb-0" id="lbl-empresa-nome">Carregando Oficina...</h5>
-                <span class="badge bg-dark border border-secondary text-info mt-1">ERP JARVIS</span>
-            </div>
-            
-            <div class="flex-grow-1 overflow-y-auto p-2 mt-2" id="menu-lateral">
-                <button class="nav-btn active w-100 text-start bg-transparent border-0 text-white p-3 mb-1 rounded" onclick="ui.irSecao('sec-os', this)"><i class="bi bi-kanban me-2"></i> Pátio / Kanban</button>
-                <button class="nav-btn w-100 text-start bg-transparent border-0 text-white p-3 mb-1 rounded" onclick="ui.irSecao('sec-clientes', this)"><i class="bi bi-people me-2"></i> CRM / Clientes</button>
-                <button class="nav-btn w-100 text-start bg-transparent border-0 text-white p-3 mb-1 rounded gestao-only" onclick="ui.irSecao('sec-financeiro', this)"><i class="bi bi-bank me-2 text-success"></i> Financeiro</button>
-                <button class="nav-btn w-100 text-start bg-transparent border-0 text-white p-3 mb-1 rounded gestao-only" onclick="ui.irSecao('sec-estoque', this)"><i class="bi bi-box-seam me-2"></i> Estoque (XML)</button>
-                <button class="nav-btn w-100 text-start bg-transparent border-0 text-white p-3 mb-1 rounded admin-only" onclick="ui.irSecao('sec-equipe', this)"><i class="bi bi-person-badge me-2"></i> Equipe / RH</button>
-                <button class="nav-btn w-100 text-start bg-transparent border-0 text-white p-3 mb-1 rounded text-warning" onclick="ui.irSecao('sec-arquivo', this)"><i class="bi bi-archive me-2"></i> Arquivo Morto</button>
-                <button class="nav-btn w-100 text-start bg-transparent border-0 text-white p-3 mb-1 rounded text-info" onclick="ui.irSecao('sec-ia', this)"><i class="bi bi-robot me-2"></i> Consultor I.A.</button>
-            </div>
+  <!-- SIDEBAR -->
+  <div style="display:flex;height:100vh">
+    <div style="width:250px;background:var(--bg-secondary);border-right:1px solid var(--border);overflow-y:auto;padding:var(--spacing-lg)">
+      <div style="margin-bottom:var(--spacing-2xl)">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,var(--brand),var(--brand-dark));border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:white;margin-bottom:var(--spacing-md)">J</div>
+        <div style="font-weight:700;font-size:var(--fs-sm)" id="sbTenantNome">Oficina</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-muted)" id="sbUserNome">Usuário</div>
+      </div>
 
-            <div class="p-3 border-top border-secondary bg-black mt-auto text-center">
-                <small class="text-white-50 d-block mb-1">Logado como: <strong class="text-info" id="lbl-usuario-nome">Usuário</strong></small>
-                <button class="btn btn-outline-danger w-100 btn-sm fw-bold" onclick="core.sair()"><i class="bi bi-power"></i> Encerrar Sessão</button>
-            </div>
-        </nav>
+      <nav style="display:flex;flex-direction:column;gap:var(--spacing-sm)">
+        <a href="#" onclick="showSection('dashboard')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">📊 Dashboard</a>
+        <a href="#" onclick="showSection('kanban')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">📋 Ordens de Serviço</a>
+        <a href="#" onclick="showSection('financeiro')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">💰 Financeiro</a>
+        <a href="#" onclick="showSection('ia')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">🤖 IA Assistente</a>
+        <a href="#" onclick="showSection('estoque')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">📦 Estoque</a>
+        <a href="#" onclick="showSection('clientes')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">👥 Clientes</a>
+        <a href="#" onclick="showSection('equipe')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">👨‍💼 Equipe</a>
+      </nav>
 
-        <main class="flex-grow-1 d-flex flex-column h-100" style="min-width: 0; height: 100vh;">
-            
-            <header class="topbar bg-card border-bottom border-secondary p-3 d-flex justify-content-between align-items-center shadow-sm" style="z-index: 1030;">
-                <div class="d-flex align-items-center">
-                    <button class="btn btn-dark border-secondary me-3 d-lg-none" onclick="ui.toggleSidebar()"><i class="bi bi-list"></i></button>
-                    <h4 class="mb-0 fw-bold text-white" id="titulo-pagina">Pátio / Kanban</h4>
-                </div>
-                
-                <div class="d-flex align-items-center gap-3">
-                    <div class="input-group d-none d-md-flex" style="width: 300px;">
-                        <span class="input-group-text bg-dark border-secondary text-info"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" id="busca-global" placeholder="Buscar placa ou cliente..." onkeyup="ui.filtrarGlobal()">
-                    </div>
-                </div>
-            </header>
-
-            <div id="painel-atencao" class="w-100 px-4 pt-3 pb-0 d-none">
-                </div>
-
-            <div class="flex-grow-1 overflow-y-auto p-4 d-flex flex-column" id="area-telas">
-                
-                <section id="sec-os" class="secao-tela h-100 d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <p class="text-white-50 mb-0">Gestão de veículos no pátio ativo.</p>
-                        <button class="btn btn-info fw-bold shadow gestao-only" onclick="os.abrirModalOS()"><i class="bi bi-plus-lg"></i> Nova Entrada</button>
-                    </div>
-                    
-                    <div class="kanban-container d-flex gap-3 flex-grow-1 overflow-x-auto pb-2" style="min-height: 500px;">
-                        <div class="kanban-col bg-card border border-secondary rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
-                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-cone-striped text-warning me-2"></i> 1. Recepção <span class="badge bg-secondary float-end" id="count-patio">0</span></h6>
-                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-patio"></div>
-                        </div>
-
-                        <div class="kanban-col bg-card border border-secondary rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
-                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-file-earmark-text text-primary me-2"></i> 2. Orçamento <span class="badge bg-secondary float-end" id="count-orcamento">0</span></h6>
-                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-orcamento"></div>
-                        </div>
-
-                        <div class="kanban-col bg-card border border-secondary rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
-                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-hourglass-split text-danger me-2"></i> 3. Aguard. Aprovação <span class="badge bg-secondary float-end" id="count-aprovacao">0</span></h6>
-                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-aprovacao"></div>
-                        </div>
-
-                        <div class="kanban-col bg-card border border-secondary rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
-                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-tools text-info me-2"></i> 4. Em Execução <span class="badge bg-secondary float-end" id="count-box">0</span></h6>
-                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-box"></div>
-                        </div>
-
-                        <div class="kanban-col bg-card border border-secondary rounded-3 p-3 d-flex flex-column" style="min-width: 320px; width: 320px;">
-                            <h6 class="text-white-50 fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> 5. Pronto / Lavagem <span class="badge bg-secondary float-end" id="count-pronto">0</span></h6>
-                            <div class="kanban-cards flex-grow-1 overflow-y-auto d-flex flex-column gap-2" id="col-pronto"></div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="sec-clientes" class="secao-tela d-none h-100 flex-column">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <p class="text-white-50 mb-0">Gestão completa da base de clientes e acessos ao Portal Web.</p>
-                        <button class="btn btn-info fw-bold gestao-only" onclick="clientes.abrirModalCliente()"><i class="bi bi-person-plus"></i> Novo Cliente</button>
-                    </div>
-                    <div class="table-responsive bg-card rounded border border-secondary flex-grow-1">
-                        <table class="table table-dark table-hover align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Nome do Cliente</th>
-                                    <th>Documento</th>
-                                    <th>Telefone</th>
-                                    <th>Login Portal</th>
-                                    <th class="text-end gestao-only">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tb-clientes-corpo">
-                                </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <section id="sec-financeiro" class="secao-tela d-none h-100 flex-column">
-                    <h5 class="text-white">Módulo Financeiro (Em Construção no Passo 3)</h5>
-                </section>
-
-                <section id="sec-estoque" class="secao-tela d-none h-100 flex-column">
-                    <h5 class="text-white">Módulo de Estoque e XML (Em Construção)</h5>
-                </section>
-                
-                <section id="sec-equipe" class="secao-tela d-none h-100 flex-column">
-                    <h5 class="text-white">Gestão de Equipe e RH (Em Construção)</h5>
-                </section>
-
-                <section id="sec-arquivo" class="secao-tela d-none h-100 flex-column">
-                    <h5 class="text-white">Arquivo Morto e Histórico (Em Construção)</h5>
-                </section>
-
-                <section id="sec-ia" class="secao-tela d-none h-100 flex-column">
-                    <h5 class="text-white">Módulo de Inteligência Artificial RAG (Em Construção)</h5>
-                </section>
-
-            </div>
-        </main>
+      <div style="margin-top:var(--spacing-2xl);padding-top:var(--spacing-lg);border-top:1px solid var(--border)">
+        <button class="btn btn-ghost btn-full" onclick="fazerLogout()" style="justify-content:flex-start">🚪 Sair</button>
+      </div>
     </div>
 
-    <div class="modal fade" id="modal-os" data-bs-backdrop="static" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <div class="modal-content bg-dark border-secondary">
-                <div class="modal-header bg-black border-secondary p-4 d-flex justify-content-between align-items-center">
-                    <h4 class="modal-title text-white fw-bold m-0"><i class="bi bi-clipboard-data text-info me-2"></i> Ficha Técnica do Veículo</h4>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                
-                <div class="modal-body p-0">
-                    <form id="form-os">
-                        <input type="hidden" id="os-id">
-                        
-                        <div class="bg-card p-4 border-bottom border-secondary">
-                            <div class="row g-3">
-                                <div class="col-md-2">
-                                    <label class="text-info fw-bold small">Placa</label>
-                                    <input type="text" class="form-control bg-black text-white fw-bold text-uppercase border-secondary" id="os-placa" required placeholder="ABC-1234">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="text-white-50 fw-bold small">Modelo do Veículo</label>
-                                    <input type="text" class="form-control bg-black text-white border-secondary" id="os-veiculo" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="text-white-50 fw-bold small">Cliente Responsável</label>
-                                    <select class="form-select bg-black text-white border-secondary" id="os-cliente-id">
-                                        </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <ul class="nav nav-tabs border-secondary bg-black px-4 pt-3" role="tablist">
-                            <li class="nav-item" role="presentation"><button class="nav-link active rounded-top-3 fw-bold" data-bs-toggle="tab" data-bs-target="#tab-os-checklist" type="button">Checklist e Queixa</button></li>
-                            <li class="nav-item" role="presentation"><button class="nav-link rounded-top-3 fw-bold" data-bs-toggle="tab" data-bs-target="#tab-os-diagnostico" type="button">Serviços e Peças</button></li>
-                        </ul>
-
-                        <div class="tab-content p-4">
-                            <div class="tab-pane fade show active" id="tab-os-checklist">
-                                <div class="mb-4">
-                                    <label class="text-warning fw-bold small">Motivo da Entrada (Queixa do Cliente)</label>
-                                    <textarea class="form-control bg-black text-warning border-secondary" id="os-queixa" rows="4" placeholder="Descreva o que o cliente relatou..."></textarea>
-                                </div>
-                                <div class="bg-black p-4 rounded border border-secondary">
-                                    <h6 class="text-white-50 border-bottom border-secondary pb-2 mb-3 small fw-bold">Inspeção Visual (Antifraude)</h6>
-                                    <div class="row g-3">
-                                        <div class="col-md-4"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chk-combustivel"><label class="form-check-label text-white">Luz Combustível Acesa</label></div></div>
-                                        <div class="col-md-4"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chk-arranhado"><label class="form-check-label text-white">Carroceria Arranhada</label></div></div>
-                                        <div class="col-md-4"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chk-pertences"><label class="form-check-label text-white">Pertences no Veículo</label></div></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="tab-pane fade" id="tab-os-diagnostico">
-                                <div class="mb-4">
-                                    <label class="text-info fw-bold small">Diagnóstico Técnico (Parecer do Mecânico)</label>
-                                    <textarea class="form-control bg-black text-white border-secondary" id="os-diagnostico" rows="4" placeholder="Descreva o problema real encontrado e a solução aplicada..."></textarea>
-                                </div>
-                                
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="text-white mb-0 fw-bold">Adição de Peças e Mão de Obra</h6>
-                                    <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="os.addLinhaPeca()">+ Inserir Linha</button>
-                                </div>
-                                <div class="table-responsive bg-black p-2 border border-secondary rounded">
-                                    <table class="table table-dark table-sm align-middle mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th class="ps-2">Descrição do Item</th>
-                                                <th width="80">Qtd</th>
-                                                <th width="120" class="gestao-only">Custo (R$)</th>
-                                                <th width="120">Venda (R$)</th>
-                                                <th width="120">Total</th>
-                                                <th width="50"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tb-pecas-os">
-                                            </tbody>
-                                    </table>
-                                </div>
-                                <div class="text-end mt-3">
-                                    <h4 class="text-white">Valor Total: <span class="text-success fw-bold ms-2 fs-3" id="os-total-display">R$ 0,00</span></h4>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                
-                <div class="modal-footer bg-black border-secondary d-flex justify-content-between p-4">
-                    <select class="form-select bg-dark text-white fw-bold border-secondary w-25" id="os-status">
-                        <option value="patio">Fase 1: Recepção</option>
-                        <option value="orcamento">Fase 2: Orçamento</option>
-                        <option value="aprovacao">Fase 3: Aguardando Cliente</option>
-                        <option value="box">Fase 4: Em Execução</option>
-                        <option value="pronto">Fase 5: Pronto</option>
-                    </select>
-                    <button type="button" class="btn btn-info fw-bold px-5 shadow-lg text-dark" onclick="os.salvarOS()"><i class="bi bi-floppy-fill me-2"></i> Gravar Prontuário</button>
-                </div>
-            </div>
+    <!-- MAIN CONTENT -->
+    <div style="flex:1;overflow-y:auto;background:var(--bg-primary)">
+      <!-- TOPBAR -->
+      <div style="background:var(--bg-secondary);border-bottom:1px solid var(--border);padding:var(--spacing-lg);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100">
+        <div style="font-size:var(--fs-lg);font-weight:700" id="topTitle">Dashboard</div>
+        <div style="display:flex;gap:var(--spacing-md);align-items:center">
+          <span style="font-size:var(--fs-sm);color:var(--text-muted)">Bem-vindo, <strong id="sbUserRole">ADMIN</strong></span>
+          <div style="width:36px;height:36px;background:var(--brand);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:var(--fs-lg)" id="sbAvatar">J</div>
         </div>
-    </div>
+      </div>
 
-    <div class="modal fade" id="modal-cliente" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content bg-dark border-secondary">
-                <div class="modal-header bg-black border-secondary p-4">
-                    <h5 class="modal-title text-white fw-bold"><i class="bi bi-person-vcard text-info me-2"></i> Cadastro de Cliente</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <form id="form-cliente">
-                        <input type="hidden" id="cli-id">
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-8">
-                                <label class="text-white-50 small">Nome Completo</label>
-                                <input type="text" class="form-control bg-black text-white border-secondary" id="cli-nome" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="text-white-50 small">Documento (CPF/CNPJ)</label>
-                                <input type="text" class="form-control bg-black text-warning fw-bold border-secondary" id="cli-doc">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="text-white-50 small">Telefone / WhatsApp</label>
-                                <input type="text" class="form-control bg-black text-white border-secondary" id="cli-tel" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="text-white-50 small">E-mail</label>
-                                <input type="email" class="form-control bg-black text-white border-secondary" id="cli-email">
-                            </div>
-                        </div>
-                        
-                        <h6 class="text-info border-bottom border-secondary pb-2 mb-3 mt-4 fw-bold">Credenciais do Portal do Cliente</h6>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="text-white-50 small">Login de Acesso</label>
-                                <input type="text" class="form-control bg-black text-info fw-bold border-secondary" id="cli-user" required placeholder="Ex: email do cliente">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="text-white-50 small">PIN Gerado (Senha)</label>
-                                <input type="text" class="form-control bg-black text-warning fw-bold border-secondary" id="cli-pass" readonly>
-                            </div>
-                        </div>
-                        <div class="text-end mt-4">
-                            <button type="button" class="btn btn-primary fw-bold px-5" onclick="clientes.salvarCliente()">Salvar Cliente</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+      <!-- SECTIONS -->
+      <div style="padding:var(--spacing-2xl)">
+        <!-- DASHBOARD -->
+        <div id="dashboardSection" class="section">
+          <h1 style="margin-bottom:var(--spacing-xl)">📊 Dashboard</h1>
+          <div id="dashboardContainer"></div>
         </div>
+
+        <!-- KANBAN -->
+        <div id="kanbanSection" class="section" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-xl)">
+            <h1>📋 Ordens de Serviço</h1>
+            <button class="btn btn-brand" onclick="prepOS();openModal('modalOS')">+ Nova O.S.</button>
+          </div>
+          <div id="kanbanContainer"></div>
+        </div>
+
+        <!-- FINANCEIRO -->
+        <div id="financeiroSection" class="section" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-xl)">
+            <h1>💰 Financeiro</h1>
+            <div style="display:flex;gap:var(--spacing-md)">
+              <button class="btn btn-brand" onclick="prepFin();openModal('modalFin')">+ Lançamento</button>
+              <button class="btn btn-primary" onclick="prepNF();openModal('modalNF')">📄 NF Entrada</button>
+            </div>
+          </div>
+
+          <!-- DRE -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--spacing-lg);margin-bottom:var(--spacing-2xl)">
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--spacing-lg)">
+              <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--spacing-sm)">ENTRADAS</div>
+              <div style="font-size:var(--fs-2xl);font-weight:700;color:var(--success)" id="dreEntradas">R$ 0,00</div>
+            </div>
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--spacing-lg)">
+              <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--spacing-sm)">SAÍDAS</div>
+              <div style="font-size:var(--fs-2xl);font-weight:700;color:var(--danger)" id="dreSaidas">R$ 0,00</div>
+            </div>
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--spacing-lg)">
+              <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--spacing-sm)">SALDO</div>
+              <div style="font-size:var(--fs-2xl);font-weight:700" id="dreSaldo">R$ 0,00</div>
+            </div>
+          </div>
+
+          <!-- TABELA -->
+          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Forma</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbFinanceiro"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- IA -->
+        <div id="iaSection" class="section" style="display:none">
+          <h1 style="margin-bottom:var(--spacing-xl)">🤖 IA Assistente</h1>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--spacing-lg);margin-bottom:var(--spacing-xl)">
+            <button class="btn btn-primary btn-full" onclick="iaAnalisarDRE()" style="justify-content:center">📊 Analisar DRE</button>
+            <button class="btn btn-primary btn-full" onclick="iaAnalisarEstoque()" style="justify-content:center">📦 Analisar Estoque</button>
+          </div>
+          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--spacing-lg);height:400px;display:flex;flex-direction:column">
+            <div id="iaMsgs" style="flex:1;overflow-y:auto;margin-bottom:var(--spacing-lg);display:flex;flex-direction:column;gap:var(--spacing-md)"></div>
+            <div style="display:flex;gap:var(--spacing-sm)">
+              <input class="input" id="iaInput" type="text" placeholder="Faça uma pergunta...">
+              <button class="btn btn-brand" onclick="iaPerguntar()">Enviar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ESTOQUE -->
+        <div id="estoqueSection" class="section" style="display:none">
+          <h1 style="margin-bottom:var(--spacing-xl)">📦 Estoque</h1>
+          <button class="btn btn-brand" onclick="prepEstoque();openModal('modalEstoque')" style="margin-bottom:var(--spacing-lg)">+ Novo Item</button>
+          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>Descrição</th>
+                  <th>Qtd</th>
+                  <th>Mín</th>
+                  <th>Custo</th>
+                  <th>Venda</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbEstoque"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CLIENTES -->
+        <div id="clientesSection" class="section" style="display:none">
+          <h1 style="margin-bottom:var(--spacing-xl)">👥 Clientes</h1>
+          <button class="btn btn-brand" onclick="prepCliente();openModal('modalCliente')" style="margin-bottom:var(--spacing-lg)">+ Novo Cliente</button>
+          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Telefone</th>
+                  <th>CPF</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbClientes"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- EQUIPE -->
+        <div id="equipeSection" class="section" style="display:none">
+          <h1 style="margin-bottom:var(--spacing-xl)">👨‍💼 Equipe</h1>
+          <button class="btn btn-brand" onclick="prepEquipe();openModal('modalEquipe')" style="margin-bottom:var(--spacing-lg)">+ Novo Funcionário</button>
+          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Cargo</th>
+                  <th>Email</th>
+                  <th>Telefone</th>
+                  <th>Comissão</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbEquipe"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container" style="z-index: 1080;"></div>
+  <!-- MODALS -->
+  <div id="modalOS" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">Ordem de Serviço</div>
+      <input type="hidden" id="osId">
+      <div class="form-group">
+        <label class="form-label">Cliente</label>
+        <select class="input" id="osCliente" onchange="filtrarVeiculosOS()"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Veículo</label>
+        <select class="input" id="osVeiculo"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mecânico</label>
+        <select class="input" id="osMec"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea class="input" id="osDesc" style="min-height:100px"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valor Total</label>
+        <input class="input" id="osTotal" type="number" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data</label>
+        <input class="input" id="osData" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="input" id="osStatus"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modalOS')">Cancelar</button>
+        <button class="btn btn-brand" id="btnSalvarOS" onclick="salvarOS()">Salvar</button>
+      </div>
+    </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script src="js/config.js"></script>
-    <script src="js/core.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/clientes.js"></script>
-    <script src="js/os.js"></script>
-    
-    <script src="js/financeiro.js"></script>
-    <script src="js/ia.js"></script>
-    <script src="js/pdf.js"></script>
+  <div id="modalFin" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">Lançamento Financeiro</div>
+      <input type="hidden" id="finId">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="input" id="finTipo">
+          <option value="Entrada">Entrada</option>
+          <option value="Saída">Saída</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input class="input" id="finDesc" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valor</label>
+        <input class="input" id="finValor" type="number" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Forma de Pagamento</label>
+        <select class="input" id="finPgto"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vencimento</label>
+        <input class="input" id="finVenc" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="input" id="finStatus">
+          <option value="Pago">Pago</option>
+          <option value="Pendente">Pendente</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modalFin')">Cancelar</button>
+        <button class="btn btn-brand" id="btnSalvarFin" onclick="salvarFin()">Salvar</button>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if(window.core && typeof core.init === 'function') {
-                core.init();
-            }
-        });
-    </script>
+  <div id="modalNF" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">Entrada de NF</div>
+      <div class="form-group">
+        <label class="form-label">Número NF</label>
+        <input class="input" id="nfNumero" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fornecedor</label>
+        <select class="input" id="nfFornec"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data</label>
+        <input class="input" id="nfData" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vencimento</label>
+        <input class="input" id="nfVenc" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Forma de Pagamento</label>
+        <select class="input" id="nfPgtoForma" onchange="checkPgtoNF()">
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="PIX">PIX</option>
+          <option value="Boleto">Boleto</option>
+          <option value="Parcelado">Parcelado</option>
+        </select>
+      </div>
+      <div id="divParcelasNF" class="form-group hidden">
+        <label class="form-label">Número de Parcelas</label>
+        <input class="input" id="nfParcelas" type="number" value="1" min="1" max="12">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Itens</label>
+        <div id="containerItensNF"></div>
+        <button type="button" class="btn btn-ghost btn-full" onclick="adicionarItemNF()" style="margin-top:var(--spacing-md)">+ Adicionar Item</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Total</label>
+        <div style="font-size:var(--fs-xl);font-weight:700;color:var(--success)" id="nfTotal">0,00</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modalNF')">Cancelar</button>
+        <button class="btn btn-brand" id="btnSalvarNF" onclick="salvarNF()">FINALIZAR ENTRADA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- SCRIPTS -->
+  <script src="js/config.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/os.js"></script>
+  <script src="js/financeiro.js"></script>
+  <script src="js/ia.js"></script>
+
+  <script>
+    function showSection(section) {
+      document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
+      document.getElementById(section + 'Section').style.display = 'block';
+      
+      const titles = {
+        dashboard: '📊 Dashboard',
+        kanban: '📋 Ordens de Serviço',
+        financeiro: '💰 Financeiro',
+        ia: '🤖 IA Assistente',
+        estoque: '📦 Estoque',
+        clientes: '👥 Clientes',
+        equipe: '👨‍💼 Equipe'
+      };
+      document.getElementById('topTitle').textContent = titles[section] || 'Dashboard';
+    }
+
+    // Populate selects
+    document.addEventListener('DOMContentLoaded', () => {
+      const statusOpts = JARVIS_CONST.STATUS_OS.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
+      document.getElementById('osStatus').innerHTML = statusOpts;
+
+      const pgtoOpts = JARVIS_CONST.FORMAS_PGTO.map(p => `<option value="${p.value}">${p.label}</option>`).join('');
+      document.getElementById('finPgto').innerHTML = pgtoOpts;
+
+      renderDashboard();
+      renderKanban();
+      renderFinanceiro();
+    });
+  </script>
 </body>
 </html>

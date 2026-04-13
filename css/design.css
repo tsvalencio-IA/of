@@ -1,207 +1,721 @@
-@charset "UTF-8";
+/**
+ * JARVIS ERP V2 — design.css
+ * Dark Mode Premium (Chevron) — Design System Completo
+ */
 
-/* ==========================================================================
-   1. VARIÁVEIS DE TEMA (DARK MODE PREMIUM - PADRÃO CHEVRON)
-   ========================================================================== */
 :root {
-    /* Superfícies e Fundos */
-    --bg-darker: #020617;      /* Fundo profundo da página */
-    --bg-card: #0f172a;        /* Fundo de cartões e sidebar */
-    --bg-black: #000000;       /* Fundo de inputs e tabelas */
-    
-    /* Cores de Destaque */
-    --brand-info: #0ea5e9;     /* Azul Chevron */
-    --brand-success: #10b981;  /* Verde Sucesso */
-    --brand-warning: #f59e0b;  /* Amarelo/Laranja Alerta */
-    --brand-danger: #ef4444;   /* Vermelho Urgente */
-    
-    /* Bordas e Linhas */
-    --border-color: #1e293b;
-    --border-light: #334155;
+  /* CORES PRINCIPAIS */
+  --brand:          #3B82F6;
+  --brand-dim:      rgba(59,130,246,0.12);
+  --brand-glow:     rgba(59,130,246,0.25);
+  --brand-dark:     #1D4ED8;
 
-    /* Tipografia */
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
+  /* PALETA NEUTRA */
+  --bg-primary:     #0F172A;
+  --bg-secondary:   #1E293B;
+  --bg-tertiary:    #334155;
+  --text-primary:   #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted:     #64748B;
+  --text-disabled:  #475569;
+  --border:         rgba(255,255,255,0.07);
+
+  /* SEMÂNTICAS */
+  --success:        #22D3A0;
+  --warning:        #F59E0B;
+  --danger:         #F43F5E;
+  --info:           #06B6D4;
+
+  /* TIPOGRAFIA */
+  --ff-sans:        -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ff-mono:        'DM Mono', 'Monaco', 'Courier New', monospace;
+  --fs-xs:          0.75rem;
+  --fs-sm:          0.875rem;
+  --fs-base:        1rem;
+  --fs-lg:          1.125rem;
+  --fs-xl:          1.25rem;
+  --fs-2xl:         1.5rem;
+  --fs-3xl:         1.875rem;
+
+  /* ESPAÇAMENTO */
+  --spacing-xs:     0.25rem;
+  --spacing-sm:     0.5rem;
+  --spacing-md:     1rem;
+  --spacing-lg:     1.5rem;
+  --spacing-xl:     2rem;
+  --spacing-2xl:    3rem;
+
+  /* BORDER RADIUS */
+  --r-sm:           0.375rem;
+  --r-md:           0.5rem;
+  --r-lg:           0.75rem;
+  --r-xl:           1rem;
+  --r-2xl:          1.5rem;
+
+  /* SHADOWS */
+  --shadow-sm:      0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-md:      0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg:      0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --shadow-xl:      0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  --shadow-2xl:     0 25px 50px -12px rgba(0,0,0,0.25);
+
+  /* TRANSIÇÕES */
+  --transition:     all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/*Configurações Gerais de Reset */
 * {
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-body {
-    background-color: var(--bg-darker) !important;
-    color: var(--text-main);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: var(--ff-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ==========================================================================
-   2. SIDEBAR E NAVEGAÇÃO
-   ========================================================================== */
-.sidebar {
-    background-color: var(--bg-card) !important;
-    border-right: 1px solid var(--border-color) !important;
-    box-shadow: 10px 0 15px rgba(0,0,0,0.3);
+/* ============================================================
+   LAYOUT BASE
+   ============================================================ */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 }
 
-.nav-btn {
-    transition: all 0.2s ease-in-out;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-weight: 500;
-    cursor: pointer;
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  padding: var(--spacing-2xl);
+  box-shadow: var(--shadow-2xl);
+  backdrop-filter: blur(10px);
 }
 
-.nav-btn:hover {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-    color: var(--text-main) !important;
+.login-logo-wrap {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
 }
 
-.nav-btn.active {
-    background-color: rgba(14, 165, 233, 0.1) !important;
-    color: var(--brand-info) !important;
-    border-left: 4px solid var(--brand-info) !important;
+.login-logo-mark {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--spacing-lg);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: white;
+  box-shadow: 0 0 20px var(--brand-glow);
 }
 
-/* ==========================================================================
-   3. KANBAN (PÁTIO) - CUSTOMIZAÇÃO
-   ========================================================================== */
-.kanban-container {
-    background-color: var(--bg-darker);
-    padding-bottom: 20px;
+.login-title {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
 }
 
-.kanban-col {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-color) !important;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.login-sub {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
 }
 
-/* Cartão da O.S. */
-.os-card {
-    background-color: var(--bg-black);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 15px;
-    cursor: pointer;
-    transition: transform 0.2s, border-color 0.2s;
-    position: relative;
-    margin-bottom: 10px;
+.login-err {
+  display: none;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  color: var(--danger);
+  font-size: var(--fs-sm);
 }
 
-.os-card:hover {
-    transform: translateY(-3px);
-    border-color: var(--brand-info);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+/* ============================================================
+   FORM ELEMENTS
+   ============================================================ */
+.form-group {
+  margin-bottom: var(--spacing-lg);
 }
 
-/* Indicadores de Status (Bordas Laterais) */
-.os-card[style*="var(--status-patio)"] { border-left: 4px solid #64748b !important; }
-.os-card[style*="var(--status-orcamento)"] { border-left: 4px solid var(--brand-info) !important; }
-.os-card[style*="var(--status-aprovacao)"] { border-left: 4px solid var(--brand-warning) !important; }
-.os-card[style*="var(--status-box)"] { border-left: 4px solid #8b5cf6 !important; }
-.os-card[style*="var(--status-pronto)"] { border-left: 4px solid var(--brand-success) !important; }
-
-/* ==========================================================================
-   4. TABELAS E COMPONENTES DE UI
-   ========================================================================== */
-.table {
-    --bs-table-bg: var(--bg-card);
-    --bs-table-hover-bg: rgba(255, 255, 255, 0.02);
-    color: var(--text-main);
-    border-color: var(--border-color);
+.form-label {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.bg-card { background-color: var(--bg-card) !important; }
-.bg-black { background-color: var(--bg-black) !important; }
-.bg-darker { background-color: var(--bg-darker) !important; }
-.border-secondary { border-color: var(--border-color) !important; }
-
-/* Scrollbars Modernas */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+.input {
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  font-family: var(--ff-sans);
+  transition: var(--transition);
 }
 
-::-webkit-scrollbar-track {
-    background: var(--bg-darker);
+.input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-glow);
+  background: rgba(59, 130, 246, 0.05);
 }
 
-::-webkit-scrollbar-thumb {
-    background: var(--border-light);
-    border-radius: 10px;
+.input-mono {
+  font-family: var(--ff-mono);
+  letter-spacing: 0.05em;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
+.pwd-wrap {
+  position: relative;
 }
 
-/* ==========================================================================
-   5. MODAIS (PRONTUÁRIO)
-   ========================================================================== */
+.pwd-toggle {
+  position: absolute;
+  right: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: var(--spacing-sm);
+  transition: var(--transition);
+}
+
+.pwd-toggle:hover {
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: none;
+  border-radius: var(--r-md);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-brand {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: white;
+  box-shadow: 0 0 20px var(--brand-glow);
+}
+
+.btn-brand:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px var(--brand-glow);
+}
+
+.btn-brand:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--brand-dark);
+}
+
+.btn-success {
+  background: var(--success);
+  color: var(--bg-primary);
+}
+
+.btn-success:hover {
+  background: #16a085;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #d1304a;
+}
+
+.btn-warn {
+  background: var(--warning);
+  color: var(--bg-primary);
+}
+
+.btn-warn:hover {
+  background: #d97706;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.btn-xl {
+  padding: var(--spacing-lg) var(--spacing-2xl);
+  font-size: var(--fs-lg);
+}
+
+.btn-lg {
+  padding: var(--spacing-lg) var(--spacing-xl);
+}
+
+.btn-sm {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--fs-sm);
+}
+
+.btn-icon {
+  padding: var(--spacing-sm);
+  width: 32px;
+  height: 32px;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   SPINNERS & LOADERS
+   ============================================================ */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+#toast-container {
+  position: fixed;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateX(400px);
+  transition: var(--transition);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast-success {
+  border-left: 4px solid var(--success);
+}
+
+.toast-error {
+  border-left: 4px solid var(--danger);
+}
+
+.toast-warning {
+  border-left: 4px solid var(--warning);
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+}
+
+.modal.show {
+  display: flex;
+}
+
 .modal-content {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-light);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  padding: var(--spacing-2xl);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-2xl);
 }
 
 .modal-header {
-    background-color: var(--bg-black);
-    border-bottom: 1px solid var(--border-color);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
 }
 
-.form-control, .form-select {
-    background-color: var(--bg-black) !important;
-    border: 1px solid var(--border-color) !important;
-    color: white !important;
+.modal-footer {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--border);
 }
 
-.form-control:focus, .form-select:focus {
-    border-color: var(--brand-info) !important;
-    box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.25) !important;
+/* ============================================================
+   KANBAN
+   ============================================================ */
+.kanban-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
 }
 
-/* Abas (Tabs) */
-.nav-tabs .nav-link {
-    color: var(--text-muted);
-    border: none;
+.kanban-coluna {
+  background: var(--bg-secondary);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
 }
 
-.nav-tabs .nav-link.active {
-    background-color: transparent !important;
-    color: var(--brand-info) !important;
-    border-bottom: 3px solid var(--brand-info) !important;
+.kanban-header {
+  padding: var(--spacing-md) var(--spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
 }
 
-/* ==========================================================================
-   6. ANIMAÇÕES (LEDS DE ATENÇÃO)
-   ========================================================================== */
-.attention-box {
-    border-radius: 8px;
-    animation: pulse-border 2s infinite;
+.kanban-label {
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-@keyframes pulse-border {
-    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+.kanban-count {
+  background: rgba(255,255,255,0.1);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: 700;
 }
 
-/* ==========================================================================
-   7. RESPONSIVIDADE
-   ========================================================================== */
-@media (max-width: 991px) {
-    .sidebar {
-        position: fixed;
-        left: -260px;
-        height: 100%;
-    }
-    .sidebar.show {
-        left: 0;
-    }
+.kanban-cards {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.kanban-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.kanban-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--brand);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-placa {
+  font-family: var(--ff-mono);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  background: var(--bg-primary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--r-sm);
+}
+
+.card-status {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--r-sm);
+}
+
+.card-body {
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-cliente {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.card-desc {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-xs);
+  line-height: 1.4;
+}
+
+.card-mec {
+  font-size: var(--fs-xs);
+  color: var(--info);
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--border);
+}
+
+.card-valor {
+  font-weight: 700;
+  color: var(--success);
+}
+
+/* ============================================================
+   TABELAS
+   ============================================================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+thead {
+  background: var(--bg-tertiary);
+  border-bottom: 2px solid var(--border);
+}
+
+th {
+  padding: var(--spacing-md) var(--spacing-lg);
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+td {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+tbody tr:hover {
+  background: var(--bg-tertiary);
+}
+
+/* ============================================================
+   EMPTY STATES
+   ============================================================ */
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  color: var(--text-muted);
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.empty-state-sub {
+  font-size: var(--fs-sm);
+}
+
+/* ============================================================
+   STATUS BADGES
+   ============================================================ */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: var(--spacing-sm);
+}
+
+.status-dot.online {
+  background: var(--success);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.hidden {
+  display: none !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mt-lg {
+  margin-top: var(--spacing-lg);
+}
+
+.mb-lg {
+  margin-bottom: var(--spacing-lg);
+}
+
+.p-lg {
+  padding: var(--spacing-lg);
+}
+
+/* ============================================================
+   ANIMAÇÕES
+   ============================================================ */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gridDrift {
+  to {
+    background-position: 48px 48px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .login-card {
+    margin: var(--spacing-lg);
+  }
+
+  .kanban-container {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    margin: var(--spacing-lg);
+  }
+
+  table {
+    font-size: var(--fs-xs);
+  }
+
+  th, td {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: var(--spacing-lg);
+  }
+
+  .btn-xl {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: var(--fs-base);
+  }
+
+  .modal-content {
+    padding: var(--spacing-lg);
+  }
 }

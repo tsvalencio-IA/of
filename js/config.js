@@ -1,5 +1,5 @@
 /**
- * JARVIS ERP — config.js
+ * JARVIS ERP V2 — config.js
  * Firebase config + white-label brand + constantes globais
  * Cada tenant pode ter sua cor de marca própria salva no Firestore
  */
@@ -26,7 +26,7 @@ window.JARVIS_BRAND = {
   name:        "JARVIS ERP",
   tagline:     "Gestão Automotiva Inteligente",
   logoLetter:  "J",
-  color:       "#3B82F6",      // brand primary (hex)
+  color:       "#3B82F6",
   colorDim:    "rgba(59,130,246,0.12)",
   colorGlow:   "rgba(59,130,246,0.25)",
   colorDark:   "#1D4ED8",
@@ -122,7 +122,6 @@ window.aplicarBrand = function(brand) {
   root.style.setProperty('--brand-glow', b.colorGlow || hexToRgba(b.color, 0.25));
   root.style.setProperty('--brand-dark', b.colorDark || shadeColor(b.color, -20));
 
-  // Atualiza logo mark em todas as ocorrências
   document.querySelectorAll('.sb-brand-mark').forEach(el => {
     el.textContent = b.logoLetter || b.name.charAt(0).toUpperCase();
   });
@@ -130,13 +129,11 @@ window.aplicarBrand = function(brand) {
   document.querySelectorAll('.brand-tagline').forEach(el => el.textContent = b.tagline || '');
   document.querySelectorAll('.brand-footer').forEach(el => el.textContent = b.footer);
 
-  // Favicon dinâmico
   const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
   link.type = 'image/x-icon'; link.rel = 'shortcut icon';
   link.href = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='${encodeURIComponent(b.color)}'/><text x='16' y='22' text-anchor='middle' font-family='sans-serif' font-weight='800' font-size='18' fill='white'>${b.logoLetter || 'J'}</text></svg>`;
   document.head.appendChild(link);
 
-  // Title
   document.title = b.name + ' — ' + (b.tagline || 'ERP Automotivo');
 };
 

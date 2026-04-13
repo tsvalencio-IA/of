@@ -1,187 +1,417 @@
 /**
- * JARVIS ERP - NÚCLEO DO SISTEMA (CORE)
- * Responsável por: Inicialização, Autenticação Híbrida e Estado Global (window.J).
+ * JARVIS ERP V2 — core.js
+ * Estado global, listeners Firestore, utilitários
+ * Namespace: window.J (INVIOLÁVEL)
  */
 
-// 1. Inicialização do Estado Global
+'use strict';
+
+// ============================================================
+// NAMESPACE GLOBAL — INVIOLÁVEL
+// ============================================================
 window.J = {
-    user: null,         // Dados do usuário logado
-    oficina: null,      // Dados da oficina (Tenant)
-    clientes: [],       // Array global de clientes
-    os: [],             // Array global de Ordens de Serviço
-    veiculos: [],       // Array global de veículos
-    estoque: [],        // Array global de itens de estoque
-    listeners: [],      // Armazena funções de desinscrição do Firebase
-    config: {
-        isMaster: false // Define se o login é o Master do SaaS
-    }
+  // SESSÃO
+  tid:         sessionStorage.getItem('j_tid')         || null,
+  role:        sessionStorage.getItem('j_role')        || null,
+  nome:        sessionStorage.getItem('j_nome')        || 'Usuário',
+  tnome:       sessionStorage.getItem('j_tnome')       || 'Oficina',
+  fid:         sessionStorage.getItem('j_fid')         || null,
+  gemini:      sessionStorage.getItem('j_gemini')      || null,
+  nicho:       sessionStorage.getItem('j_nicho')       || 'carros',
+  cloudName:   sessionStorage.getItem('j_cloud_name')  || 'dmuvm1o6m',
+  cloudPreset: sessionStorage.getItem('j_cloud_preset')|| 'evolution',
+  brand:       JSON.parse(sessionStorage.getItem('j_brand') || 'null'),
+  comissao:    parseFloat(sessionStorage.getItem('j_comissao') || '0'),
+
+  // ESTADO IN-MEMORY
+  os:              [],
+  clientes:        [],
+  veiculos:        [],
+  estoque:         [],
+  financeiro:      [],
+  equipe:          [],
+  fornecedores:    [],
+  agendamentos:    [],
+  mensagens:       [],
+  chatEquipe:      [],
+  auditoria:       [],
+  conhecimentoIA:  [],
+  chatAtivo:       null,
+
+  // DB REFERENCE (preenchido em initCore)
+  db: null
 };
 
-// 2. Motor de Autenticação e Verificação de Sessão
-const core = {
-    /**
-     * Inicializa o sistema assim que o DOM está pronto
-     */
-    init: function() {
-        console.log("[CORE] Iniciando motor JARVIS...");
-        this.verificarSessao();
-    },
+// ============================================================
+// INICIALIZAÇÃO
+// ============================================================
+window.initCore = function() {
+  // Firebase
+  J.db = window.initFirebase();
 
-    /**
-     * Lógica de Verificação de Login (Padrão ts-oficinas)
-     * Diferencia Master (Auth) de Equipe (Banco de Dados/PIN)
-     */
-    verificarSessao: function() {
-        // Verifica se há um login de Equipe salvo no LocalStorage primeiro
-        const equipeLogada = localStorage.getItem('jarvis_equipe_login');
-        
-        if (equipeLogada) {
-            const dados = JSON.parse(equipeLogada);
-            this.autenticarEquipe(dados.login, dados.pin);
-        } else {
-            // Se não houver equipe, verifica se há um Master logado via Firebase Auth
-            firebase.auth().onAuthStateChanged((user) => {
-                if (user) {
-                    window.J.config.isMaster = true;
-                    this.carregarDadosMaster(user.uid);
-                } else {
-                    console.warn("[CORE] Nenhuma sessão encontrada. Redirecionando...");
-                    window.location.href = "index.html";
-                }
-            });
-        }
-    },
+  // Proteção de rota
+  if (!J.tid) {
+    window.location.replace('index.html');
+    return;
+  }
 
-    /**
-     * Autenticação de Equipe (Busca direta no Banco de Dados)
-     */
-    autenticarEquipe: function(login, pin) {
-        db.collectionGroup("funcionarios")
-            .where("login", "==", login)
-            .where("pin", "==", pin)
-            .get()
-            .then((querySnapshot) => {
-                if (!querySnapshot.empty) {
-                    const doc = querySnapshot.docs[0];
-                    window.J.user = doc.data();
-                    window.J.user.id = doc.id;
-                    
-                    // A partir do funcionário, achamos a Oficina (Parent)
-                    const oficinaRef = doc.ref.parent.parent;
-                    oficinaRef.get().then((ofDoc) => {
-                        window.J.oficina = ofDoc.data();
-                        window.J.oficina.id = ofDoc.id;
-                        this.prepararAmbiente();
-                    });
-                } else {
-                    localStorage.removeItem('jarvis_equipe_login');
-                    window.location.href = "index.html";
-                }
-            })
-            .catch((error) => {
-                console.error("[CORE] Erro ao autenticar equipe:", error);
-                window.location.href = "index.html";
-            });
-    },
+  // Aplicar brand do tenant
+  if (J.brand) window.aplicarBrand(J.brand);
 
-    /**
-     * Carrega dados para o usuário Master (Dono do SaaS)
-     */
-    carregarDadosMaster: function(uid) {
-        db.collection("oficinas").doc(uid).get().then((doc) => {
-            if (doc.exists) {
-                window.J.oficina = doc.data();
-                window.J.oficina.id = doc.id;
-                window.J.user = { nome: "Administrador Master", role: "master" };
-                this.prepararAmbiente();
-            } else {
-                window.location.href = "index.html";
-            }
-        });
-    },
+  // Popular UI base
+  _populateBaseUI();
 
-    /**
-     * Prepara a interface e inicia as escutas (onSnapshot)
-     */
-    prepararAmbiente: function() {
-        console.log(`[CORE] Ambiente pronto: ${window.J.oficina.nomeFantasia}`);
-        
-        // Atualiza elementos visuais básicos
-        document.getElementById('lbl-empresa-nome').textContent = window.J.oficina.nomeFantasia;
-        document.getElementById('lbl-usuario-nome').textContent = window.J.user.nome;
-
-        // Aplica permissões de interface baseadas no cargo
-        this.aplicarPermissoes(window.J.user.role);
-
-        // Inicia sincronização em tempo real das coleções
-        this.iniciarEscutas();
-        
-        // Inicializa a UI
-        if (window.ui && typeof ui.init === 'function') {
-            ui.init();
-        }
-    },
-
-    /**
-     * Gerencia o que cada cargo pode ver (RBAC)
-     */
-    aplicarPermissoes: function(role) {
-        const gestaoElements = document.querySelectorAll('.gestao-only');
-        const adminElements = document.querySelectorAll('.admin-only');
-
-        if (role === 'mecanico') {
-            gestaoElements.forEach(el => el.classList.add('d-none'));
-            adminElements.forEach(el => el.classList.add('d-none'));
-        } else if (role === 'gerente') {
-            adminElements.forEach(el => el.classList.add('d-none'));
-        }
-    },
-
-    /**
-     * Escutas em Tempo Real (A alma do sistema)
-     */
-    iniciarEscutas: function() {
-        const ofId = window.J.oficina.id;
-
-        // Escuta Ordens de Serviço
-        const unsubOS = db.collection("oficinas").doc(ofId).collection("ordens_servico")
-            .onSnapshot((snapshot) => {
-                window.J.os = [];
-                snapshot.forEach(doc => {
-                    let data = doc.data();
-                    data.id = doc.id;
-                    window.J.os.push(data);
-                });
-                // Notifica o módulo de OS para redesenhar o Kanban
-                if (window.os && typeof os.renderizarKanban === 'function') {
-                    os.renderizarKanban();
-                }
-            });
-
-        // Escuta Clientes
-        const unsubClientes = db.collection("oficinas").doc(ofId).collection("clientes")
-            .onSnapshot((snapshot) => {
-                window.J.clientes = [];
-                snapshot.forEach(doc => {
-                    let data = doc.data();
-                    data.id = doc.id;
-                    window.J.clientes.push(data);
-                });
-            });
-
-        window.J.listeners.push(unsubOS, unsubClientes);
-    },
-
-    /**
-     * Logout Seguro
-     */
-    sair: function() {
-        localStorage.removeItem('jarvis_equipe_login');
-        firebase.auth().signOut().then(() => {
-            window.location.href = "index.html";
-        });
-    }
+  // Start all listeners
+  _escutarOS();
+  _escutarClientes();
+  _escutarVeiculos();
+  _escutarEstoque();
+  _escutarFinanceiro();
+  _escutarEquipe();
+  _escutarFornecedores();
+  _escutarMensagens();
+  _escutarAgendamentos();
+  _escutarAuditoria();
+  _escutarConhecimentoIA();
 };
 
-// Acionamento automático do Core
-core.init();
+window.initCoreEquipe = function() {
+  J.db = window.initFirebase();
+  if (!J.tid || J.role === 'admin') {
+    window.location.replace('index.html');
+    return;
+  }
+  if (J.brand) window.aplicarBrand(J.brand);
+  _escutarOS();
+  _escutarClientes();
+  _escutarVeiculos();
+  _escutarEstoque();
+  _escutarChatEquipe();
+  _escutarComissoesEquipe();
+};
+
+function _populateBaseUI() {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('sbTenantNome', J.tnome);
+  set('sbUserNome', J.nome);
+  set('sbUserRole', (J.role || 'equipe').toUpperCase());
+  set('topNomeTenant', J.tnome);
+
+  const av = document.getElementById('sbAvatar');
+  if (av) av.textContent = J.nome.charAt(0).toUpperCase();
+
+  const nicho = { carros: '🚗 Carros', motos: '🏍️ Motos', bicicletas: '🚲 Bicicletas', multi: '🔧 Multi' };
+  const tnEl = document.getElementById('tbNicho');
+  if (tnEl) tnEl.textContent = nicho[J.nicho] || '🚗 Carros';
+}
+
+// ============================================================
+// LISTENERS FIRESTORE
+// ============================================================
+function _escutarOS() {
+  J.db.collection('ordens_servico')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.os = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderKanban)    renderKanban();
+      if (window.renderDashboard) renderDashboard();
+      if (window.calcComissoes)   calcComissoes();
+    });
+}
+
+function _escutarClientes() {
+  J.db.collection('clientes')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.clientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderClientes) renderClientes();
+      popularSelects();
+    });
+}
+
+function _escutarVeiculos() {
+  J.db.collection('veiculos')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.veiculos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderVeiculos) renderVeiculos();
+      popularSelects();
+    });
+}
+
+function _escutarEstoque() {
+  J.db.collection('estoqueItems')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.estoque = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderEstoque)   renderEstoque();
+      if (window.renderDashboard) renderDashboard();
+    });
+}
+
+function _escutarFinanceiro() {
+  J.db.collection('financeiro')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.financeiro = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderFinanceiro) renderFinanceiro();
+      if (window.renderDashboard)  renderDashboard();
+    });
+}
+
+function _escutarEquipe() {
+  J.db.collection('funcionarios')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.equipe = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderEquipe)  renderEquipe();
+      if (window.calcComissoes) calcComissoes();
+      popularSelects();
+    });
+}
+
+function _escutarFornecedores() {
+  J.db.collection('fornecedores')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.fornecedores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderFornecedores) renderFornecedores();
+      popularSelects();
+    });
+}
+
+function _escutarMensagens() {
+  J.db.collection('mensagens')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.mensagens = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      if (window.renderChatLista) renderChatLista();
+      if (J.chatAtivo && window.renderChatMsgs) renderChatMsgs(J.chatAtivo);
+      const unread = J.mensagens.filter(m => m.sender === 'cliente' && !m.lidaAdmin).length;
+      const badge = document.getElementById('chatBadge');
+      if (badge) {
+        badge.textContent = unread;
+        badge.classList.toggle('show', unread > 0);
+      }
+    });
+}
+
+function _escutarAgendamentos() {
+  J.db.collection('agendamentos')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.agendamentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderAgenda) renderAgenda();
+    });
+}
+
+function _escutarAuditoria() {
+  J.db.collection('lixeira_auditoria')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.auditoria = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => b.ts > a.ts ? 1 : -1);
+      if (window.renderAuditoria) renderAuditoria();
+    });
+}
+
+function _escutarConhecimentoIA() {
+  J.db.collection('conhecimento_ia')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.conhecimentoIA = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderConhecimentoIA) renderConhecimentoIA();
+    });
+}
+
+function _escutarChatEquipe() {
+  J.db.collection('chat_equipe')
+    .where('tenantId', '==', J.tid)
+    .onSnapshot(snap => {
+      J.chatEquipe = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      if (window.renderChatEquipe) renderChatEquipe();
+    });
+}
+
+function _escutarComissoesEquipe() {
+  if (!J.fid) return;
+  J.db.collection('financeiro')
+    .where('tenantId', '==', J.tid)
+    .where('isComissao', '==', true)
+    .where('mecId', '==', J.fid)
+    .onSnapshot(snap => {
+      const fins = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (window.renderComissoes) renderComissoes(fins);
+    });
+}
+
+// ============================================================
+// POPULAR SELECTS (usado em vários módulos)
+// ============================================================
+window.popularSelects = function() {
+  const cOpts = '<option value="">Selecione...</option>' +
+    J.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+
+  ['osCliente', 'agdCliente', 'veicDono'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = cOpts;
+  });
+
+  const mOpts = '<option value="">Não atribuído</option>' +
+    J.equipe.map(f => `<option value="${f.id}">${f.nome} — ${JARVIS_CONST.CARGOS[f.cargo] || f.cargo}</option>`).join('');
+
+  ['osMec', 'agdMec'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = mOpts;
+  });
+
+  const fOpts = '<option value="">Selecione...</option>' +
+    J.fornecedores.map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
+
+  ['nfFornec'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = fOpts;
+  });
+};
+
+window.filtrarVeiculosOS = function() {
+  const cid  = _v('osCliente');
+  const tipo = _v('osTipoVeiculo');
+  let veics  = J.veiculos.filter(v => v.clienteId === cid);
+  if (tipo) veics = veics.filter(v => v.tipo === tipo);
+  const el = document.getElementById('osVeiculo');
+  if (el) el.innerHTML = '<option value="">Selecione...</option>' +
+    veics.map(v => `<option value="${v.id}">${v.modelo} (${v.placa})</option>`).join('');
+};
+
+window.filtrarVeicsAgenda = function() {
+  const cid  = _v('agdCliente');
+  const veics = J.veiculos.filter(v => v.clienteId === cid);
+  const el = document.getElementById('agdVeiculo');
+  if (el) el.innerHTML = '<option value="">Selecione...</option>' +
+    veics.map(v => `<option value="${v.id}">${v.modelo} (${v.placa})</option>`).join('');
+};
+
+// ============================================================
+// AUDITORIA
+// ============================================================
+window.audit = async function(modulo, acao) {
+  try {
+    await J.db.collection('lixeira_auditoria').add({
+      tenantId: J.tid,
+      modulo,
+      acao,
+      usuario: J.nome,
+      ts: new Date().toISOString()
+    });
+  } catch (e) { /* silencioso */ }
+};
+
+// ============================================================
+// UTILITÁRIOS GLOBAIS
+// ============================================================
+
+// Shorthand DOM
+window._$  = id  => document.getElementById(id);
+window._v  = id  => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+window._sv = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+window._st = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt ?? ''; };
+window._sh = (id, htm) => { const el = document.getElementById(id); if (el) el.innerHTML = htm ?? ''; };
+window._chk = id => { const el = document.getElementById(id); return el ? el.checked : false; };
+window._ck  = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+
+// Formatação
+window.moeda = v =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(v) || 0);
+
+window.dtBr = iso => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }); }
+  catch { return iso; }
+};
+
+window.dtHrBr = iso => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }); }
+  catch { return iso; }
+};
+
+window.dtISO = () => new Date().toISOString();
+
+window.slugify = str =>
+  str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+
+window.randId = (n = 6) => Math.random().toString(36).slice(-n).toUpperCase();
+
+window.sair = function() {
+  sessionStorage.clear();
+  window.location.href = 'index.html';
+};
+
+// WhatsApp deep link
+window.abrirWpp = function(numero, msg) {
+  const n = (numero || '').replace(/\D/g, '');
+  const url = `https://wa.me/55${n}?text=${encodeURIComponent(msg || '')}`;
+  window.open(url, '_blank');
+};
+
+// Toast notifications
+window.toastOk = function(msg) {
+  _showToast(msg, 'success');
+};
+
+window.toastWarn = function(msg) {
+  _showToast(msg, 'warning');
+};
+
+window.toastErr = function(msg) {
+  _showToast(msg, 'error');
+};
+
+function _showToast(msg, type) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('show');
+  }, 10);
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Modal helpers
+window.openModal = function(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('show');
+};
+
+window.closeModal = function(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('show');
+};
+
+// Loading state
+window.setLoading = function(id, loading, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.disabled = loading;
+  if (loading) {
+    el.dataset.originalText = el.textContent;
+    el.innerHTML = '<span class="spinner"></span> Processando...';
+  } else {
+    el.textContent = text || el.dataset.originalText || 'Salvar';
+  }
+};

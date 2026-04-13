@@ -1,328 +1,385 @@
 /**
- * ERP MASTER - MÓDULO FINANCEIRO, DRE E SUPRIMENTOS (XML)
- * Responsável por: Fluxo de Caixa, Parcelamentos (até 24x), Auditoria Financeira e Leitura de NFe.
+ * JARVIS ERP V2 — financeiro.js
+ * DRE, Fluxo de Caixa, NF Entrada, Parcelamento, Comissões
  */
 
-window.financeiro = {
-    listaLancamentos: [],
-    listenerFinanceiro: null,
+'use strict';
 
-    /**
-     * Inicializa o módulo financeiro
-     */
-    init: function() {
-        console.log("[FINANCEIRO] Motor Financeiro Iniciado.");
-        setTimeout(() => {
-            if (window.core && window.core.session.tenantId) {
-                this.escutarLancamentos();
-            }
-        }, 500);
-    },
+// ============================================================
+// RENDERIZAR FINANCEIRO (DRE + TABELA)
+// ============================================================
+window.renderFinanceiro = function() {
+  const filTipo   = _v('filtroFinTipo')   || '';
+  const filStatus = _v('filtroFinStatus') || '';
+  const filMes    = _v('filtroFinMes')    || '';
 
-    /**
-     * Escuta todos os lançamentos do mês atual para montar o DRE (Demonstração do Resultado)
-     */
-    escutarLancamentos: function() {
-        const tenantId = window.core.session.tenantId;
-        
-        // Aqui, numa versão de produção, colocaríamos um filtro de datas (Mês Atual). 
-        // Para a tua estrutura, vamos escutar todos os abertos e os recentes.
-        this.listenerFinanceiro = db.collection("tenants").doc(tenantId).collection("financeiro")
-            .orderBy("dataVencimento", "asc")
-            .onSnapshot((snapshot) => {
-                this.listaLancamentos = [];
-                let htmlTabela = "";
-                
-                let totalReceitas = 0;
-                let totalDespesas = 0;
-                let totalPendente = 0;
+  let base = [...J.financeiro];
+  if (filTipo)   base = base.filter(f => f.tipo === filTipo);
+  if (filStatus) base = base.filter(f => f.status === filStatus);
+  if (filMes)    base = base.filter(f => (f.venc || '').startsWith(filMes));
+  base.sort((a, b) => (b.venc || '') > (a.venc || '') ? 1 : -1);
 
-                snapshot.forEach((doc) => {
-                    const lanc = doc.data();
-                    lanc.id = doc.id;
-                    this.listaLancamentos.push(lanc);
+  // DRE (total geral, não filtrado)
+  let entradas = 0, saidas = 0;
+  J.financeiro.filter(f => f.status === 'Pago').forEach(f => {
+    if (f.tipo === 'Entrada') entradas += f.valor || 0;
+    else saidas += f.valor || 0;
+  });
 
-                    // Formatação de Datas
-                    let dataVenc = lanc.dataVencimento ? new Date(lanc.dataVencimento).toLocaleDateString('pt-PT') : 'N/D';
-                    
-                    // Cálculos para o Dashboard (DRE)
-                    if (lanc.status === 'pago') {
-                        if (lanc.tipo === 'receita') totalReceitas += lanc.valor;
-                        if (lanc.tipo === 'despesa') totalDespesas += lanc.valor;
-                    } else {
-                        if (lanc.tipo === 'receita') totalPendente += lanc.valor;
-                        if (lanc.tipo === 'despesa') totalPendente -= lanc.valor;
-                    }
+  _st('dreEntradas', moeda(entradas));
+  _st('dreSaidas',   moeda(saidas));
+  const saldo = entradas - saidas;
+  _st('dreSaldo', moeda(saldo));
+  const saldoEl = _$('dreSaldo');
+  if (saldoEl) saldoEl.style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
 
-                    // Identidade Visual da Linha
-                    const corTipo = lanc.tipo === 'receita' ? 'text-success' : 'text-danger';
-                    const iconeTipo = lanc.tipo === 'receita' ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
-                    const badgeStatus = lanc.status === 'pago' 
-                        ? '<span class="badge bg-success">Pago</span>' 
-                        : '<span class="badge bg-warning text-dark">Pendente</span>';
+  // Tabela
+  const html = base.map(f => {
+    const atrasado = f.status === 'Pendente' && f.venc && new Date(f.venc) < new Date();
+    const bgAtrasado = atrasado ? 'background:rgba(244,63,94,0.03)' : '';
+    
+    return `
+      <tr style="${bgAtrasado}">
+        <td style="font-family:var(--ff-mono);font-size:0.78rem">${dtBr(f.venc)}</td>
+        <td><span style="background-color:${f.tipo === 'Entrada' ? '#22D3A020' : '#F4633E20'};color:${f.tipo === 'Entrada' ? '#22D3A0' : '#F4633E'};padding:4px 8px;border-radius:4px;font-size:0.8rem">${f.tipo}</span></td>
+        <td>${f.desc || '—'}</td>
+        <td style="font-family:var(--ff-mono);font-size:0.75rem">${f.pgto || '—'}</td>
+        <td style="font-family:var(--ff-mono);font-weight:700;color:${f.tipo === 'Entrada' ? 'var(--success)' : 'var(--danger)'}">${moeda(f.valor)}</td>
+        <td><span style="background-color:${f.status === 'Pago' ? '#22D3A020' : '#F59E0B20'};color:${f.status === 'Pago' ? '#22D3A0' : '#F59E0B'};padding:4px 8px;border-radius:4px;font-size:0.8rem">${f.status}</span></td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="prepFin('${f.id}');openModal('modalFin')" style="margin-right:4px">✏</button>
+          <button class="btn btn-sm ${f.status === 'Pago' ? 'btn-warn' : 'btn-success'}" onclick="toggleStatusFin('${f.id}','${f.status}')" title="${f.status === 'Pago' ? 'Marcar pendente' : 'Marcar pago'}">
+            ${f.status === 'Pago' ? '⌛' : '✓'}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px">Nenhum lançamento</td></tr>';
 
-                    htmlTabela += `
-                        <tr class="align-middle border-bottom border-secondary">
-                            <td class="${corTipo} fs-5"><i class="bi ${iconeTipo}"></i></td>
-                            <td class="text-white fw-bold">${lanc.descricao} <br><small class="text-white-50 fw-normal">Ref: ${lanc.referenciaOS || 'Avulso'}</small></td>
-                            <td class="text-white-50">${lanc.categoria}</td>
-                            <td class="text-info">${dataVenc}</td>
-                            <td class="text-white">${lanc.formaPagamento} ${lanc.parcelaAtual ? `(${lanc.parcelaAtual}/${lanc.totalParcelas})` : ''}</td>
-                            <td class="${corTipo} fw-bold">R$ ${lanc.valor.toFixed(2)}</td>
-                            <td>${badgeStatus}</td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-info" onclick="financeiro.editarLancamento('${lanc.id}')" title="Editar Título"><i class="bi bi-pencil"></i></button>
-                                ${lanc.status !== 'pago' ? `<button class="btn btn-sm btn-success ms-1" onclick="financeiro.liquidarLancamento('${lanc.id}')" title="Dar Baixa"><i class="bi bi-check-lg"></i></button>` : ''}
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                // Injeta no HTML (Assumindo que iremos criar estes IDs na secção Financeiro do jarvis.html)
-                const tbCorpo = document.getElementById("tb-financeiro-corpo");
-                if (tbCorpo) tbCorpo.innerHTML = htmlTabela || '<tr><td colspan="8" class="text-center text-white-50">Sem movimentos registados.</td></tr>';
-
-                // Atualiza Cards de Resumo
-                const cardRec = document.getElementById("dre-receitas");
-                const cardDes = document.getElementById("dre-despesas");
-                const cardSal = document.getElementById("dre-saldo");
-                
-                if(cardRec) cardRec.textContent = `R$ ${totalReceitas.toFixed(2)}`;
-                if(cardDes) cardDes.textContent = `R$ ${totalDespesas.toFixed(2)}`;
-                if(cardSal) {
-                    const saldo = totalReceitas - totalDespesas;
-                    cardSal.textContent = `R$ ${saldo.toFixed(2)}`;
-                    cardSal.className = saldo >= 0 ? "text-success fw-bold" : "text-danger fw-bold";
-                }
-
-            }, (error) => {
-                console.error("[FINANCEIRO] Erro ao carregar fluxo de caixa:", error);
-                if(window.ui) window.ui.mostrarToast("Erro Financeiro", "Falha ao sincronizar o cofre.", "danger");
-            });
-    },
-
-    /**
-     * Lógica de Parcelamento Dinâmico e Registo Financeiro
-     * Esta função é chamada ao salvar uma nova fatura (ou ao faturar uma OS no arquivo os.js)
-     */
-    gerarTitulosFinanceiros: async function(dadosBase, numParcelas) {
-        const tenantId = window.core.session.tenantId;
-        const batch = db.batch(); // Operação Atómica: Ou guarda todas as parcelas ou nenhuma.
-
-        try {
-            const valorPorParcela = dadosBase.valorTotal / numParcelas;
-            let dataBase = new Date(dadosBase.dataPrimeiroVencimento);
-
-            for (let i = 1; i <= numParcelas; i++) {
-                // Calcula a data de vencimento (+1 mês para cada parcela, simplificado para 30 dias)
-                let dataVencParcela = new Date(dataBase);
-                if (i > 1) {
-                    dataVencParcela.setMonth(dataBase.getMonth() + (i - 1));
-                }
-
-                const docRef = db.collection("tenants").doc(tenantId).collection("financeiro").doc();
-                
-                const lancamento = {
-                    tipo: dadosBase.tipo, // 'receita' ou 'despesa'
-                    descricao: dadosBase.descricao,
-                    categoria: dadosBase.categoria,
-                    referenciaOS: dadosBase.referenciaOS || null,
-                    valor: valorPorParcela,
-                    formaPagamento: dadosBase.formaPagamento,
-                    parcelaAtual: i,
-                    totalParcelas: numParcelas,
-                    dataVencimento: dataVencParcela.getTime(), // Guardamos em milissegundos para facilitar ordenação
-                    status: 'pendente',
-                    auditoria: [{
-                        data: new Date().getTime(),
-                        usuario: window.core.session.nome,
-                        acao: "Título Criado"
-                    }]
-                };
-
-                batch.set(docRef, lancamento);
-            }
-
-            await batch.commit();
-            window.ui.mostrarToast("Financeiro", `${numParcelas} parcela(s) gerada(s) com sucesso.`, "success");
-
-        } catch (error) {
-            console.error("[FINANCEIRO] Erro ao parcelar:", error);
-            window.ui.mostrarToast("Erro", "Falha ao processar o parcelamento financeiro.", "danger");
-        }
-    },
-
-    /**
-     * Edição com Auditoria Rigorosa
-     * Permite alterar o vencimento ou o valor, mas regista quem o fez.
-     */
-    editarLancamento: async function(idLancamento, novoValor, novaDataMs) {
-        const tenantId = window.core.session.tenantId;
-        const lancRef = db.collection("tenants").doc(tenantId).collection("financeiro").doc(idLancamento);
-        
-        try {
-            const doc = await lancRef.get();
-            if (!doc.exists) throw new Error("Título não encontrado.");
-
-            const lanc = doc.data();
-            const logAntigo = lanc.auditoria || [];
-            
-            const logNovo = {
-                data: new Date().getTime(),
-                usuario: window.core.session.nome,
-                acao: `Editou Título. Valor Antigo: ${lanc.valor}. Data Antiga: ${new Date(lanc.dataVencimento).toLocaleDateString()}`
-            };
-
-            logAntigo.push(logNovo);
-
-            await lancRef.update({
-                valor: parseFloat(novoValor) || lanc.valor,
-                dataVencimento: novaDataMs || lanc.dataVencimento,
-                auditoria: logAntigo,
-                ultimaEdicaoPor: window.core.session.nome
-            });
-
-            window.ui.mostrarToast("Atualizado", "Alterações gravadas com registo de auditoria.", "success");
-
-        } catch (error) {
-            console.error("[FINANCEIRO] Erro ao editar:", error);
-        }
-    },
-
-    liquidarLancamento: async function(idLancamento) {
-        const tenantId = window.core.session.tenantId;
-        try {
-            await db.collection("tenants").doc(tenantId).collection("financeiro").doc(idLancamento).update({
-                status: 'pago',
-                dataPagamento: new Date().getTime(),
-                pagoPor: window.core.session.nome
-            });
-            window.ui.mostrarToast("Sucesso", "Título liquidado. O DRE foi atualizado.", "success");
-        } catch (error) {
-            console.error("Erro ao liquidar:", error);
-        }
-    },
-
-    /**
-     * ========================================================================
-     * MÓDULO SUPRIMENTOS: IMPORTAÇÃO MÁGICA DE XML DA NOTA FISCAL
-     * ========================================================================
-     */
-    lerXMLNotaFiscal: function(eventoInput) {
-        const ficheiro = eventoInput.target.files[0];
-        if (!ficheiro) return;
-
-        const leitor = new FileReader();
-        
-        leitor.onload = async (e) => {
-            const textoXML = e.target.result;
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(textoXML, "text/xml");
-
-            // Verifica se é uma NFe válida do governo
-            const nfe = xmlDoc.getElementsByTagName("NFe")[0] || xmlDoc.getElementsByTagName("nfeProc")[0];
-            if (!nfe) {
-                window.ui.mostrarToast("Erro no Ficheiro", "O ficheiro fornecido não é um XML de Nota Fiscal válido.", "danger");
-                return;
-            }
-
-            // Informações Gerais da Nota
-            const fornecedorNode = xmlDoc.getElementsByTagName("emit")[0];
-            const nomeFornecedor = fornecedorNode ? fornecedorNode.getElementsByTagName("xNome")[0].textContent : "Fornecedor Desconhecido";
-            const valorTotalNfeNode = xmlDoc.getElementsByTagName("vNF")[0];
-            const valorTotalNfe = valorTotalNfeNode ? parseFloat(valorTotalNfeNode.textContent) : 0;
-
-            // Extração de Produtos (Tag <det>)
-            const produtosNode = xmlDoc.getElementsByTagName("det");
-            let produtosExtraidos = [];
-
-            for (let i = 0; i < produtosNode.length; i++) {
-                const prod = produtosNode[i].getElementsByTagName("prod")[0];
-                
-                const nomePeca = prod.getElementsByTagName("xProd")[0].textContent;
-                const cfop = prod.getElementsByTagName("CFOP")[0].textContent;
-                const qtd = parseFloat(prod.getElementsByTagName("qCom")[0].textContent);
-                const custoUn = parseFloat(prod.getElementsByTagName("vUnCom")[0].textContent);
-                
-                // Inteligência Artificial / Lógica de Precificação Base: Sugere +50% de margem no preço de venda
-                const precoSugerido = custoUn * 1.50;
-
-                produtosExtraidos.push({
-                    descricao: nomePeca,
-                    quantidade: qtd,
-                    custo: custoUn,
-                    vendaSugerida: precoSugerido,
-                    cfop: cfop
-                });
-            }
-
-            console.log("[SUPRIMENTOS] Peças Extraídas do XML:", produtosExtraidos);
-            
-            // Pergunta ao utilizador se deseja processar
-            const confirmar = confirm(`Ficheiro Lido com Sucesso!\nFornecedor: ${nomeFornecedor}\nTotal da Nota: R$ ${valorTotalNfe.toFixed(2)}\nPeças Identificadas: ${produtosExtraidos.length}\n\nDeseja adicionar estas peças ao Estoque e gerar o Contas a Pagar?`);
-            
-            if (confirmar) {
-                await this.processarEntradaXML(nomeFornecedor, valorTotalNfe, produtosExtraidos);
-            }
-            
-            eventoInput.target.value = ""; // Limpa o input file
-        };
-
-        leitor.readAsText(ficheiro);
-    },
-
-    processarEntradaXML: async function(fornecedor, valorTotal, pecas) {
-        const tenantId = window.core.session.tenantId;
-        const batch = db.batch();
-
-        try {
-            // 1. Alimentar o Estoque
-            pecas.forEach(peca => {
-                const estoqueRef = db.collection("tenants").doc(tenantId).collection("estoque").doc();
-                batch.set(estoqueRef, {
-                    descricao: peca.descricao,
-                    quantidadeEmEstoque: peca.quantidade,
-                    custoUltimaCompra: peca.custo,
-                    precoVenda: peca.vendaSugerida,
-                    cfopOriginal: peca.cfop,
-                    dataEntrada: new Date().getTime()
-                });
-            });
-
-            // 2. Gerar Título no Contas a Pagar (Despesa Única de Exemplo, poderia chamar a função de parcelar)
-            const despesaRef = db.collection("tenants").doc(tenantId).collection("financeiro").doc();
-            batch.set(despesaRef, {
-                tipo: 'despesa',
-                descricao: `Nota Fiscal - ${fornecedor}`,
-                categoria: 'Compra de Peças',
-                valor: valorTotal,
-                formaPagamento: 'Boleto XML',
-                parcelaAtual: 1,
-                totalParcelas: 1,
-                dataVencimento: new Date().getTime() + (30 * 24 * 60 * 60 * 1000), // Sugere vencimento para 30 dias
-                status: 'pendente',
-                auditoria: [{
-                    data: new Date().getTime(),
-                    usuario: window.core.session.nome,
-                    acao: "Gerado Automaticamente via XML"
-                }]
-            });
-
-            await batch.commit();
-            window.ui.mostrarToast("Sucesso", "Estoque alimentado e Despesa lançada com sucesso!", "success");
-
-        } catch (error) {
-            console.error("[SUPRIMENTOS] Erro ao gravar XML:", error);
-            window.ui.mostrarToast("Erro de Banco", "Não foi possível guardar os dados do XML.", "danger");
-        }
-    }
+  _sh('tbFinanceiro', html);
 };
 
-// Auto-Init
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        if (window.financeiro && typeof window.financeiro.init === 'function') {
-            window.financeiro.init();
-        }
-    }, 1500);
-});
+// ============================================================
+// PREPARAR FORMULÁRIO FINANCEIRO
+// ============================================================
+window.prepFin = function(id = null) {
+  _sv('finId','');
+  _sv('finDesc','');
+  _sv('finValor','');
+  _sv('finNota','');
+  _sv('finTipo',   'Entrada');
+  _sv('finStatus', 'Pago');
+  _sv('finPgto',   'PIX');
+  _sv('finVenc',   new Date().toISOString().split('T')[0]);
+
+  if (id) {
+    const f = J.financeiro.find(x => x.id === id);
+    if (!f) return;
+    _sv('finId',     f.id);
+    _sv('finDesc',   f.desc   || '');
+    _sv('finValor',  f.valor  || 0);
+    _sv('finTipo',   f.tipo   || 'Entrada');
+    _sv('finStatus', f.status || 'Pago');
+    _sv('finPgto',   f.pgto   || 'PIX');
+    _sv('finVenc',   f.venc   || '');
+    _sv('finNota',   f.nota   || '');
+  }
+
+  openModal('modalFin');
+};
+
+// ============================================================
+// SALVAR LANÇAMENTO FINANCEIRO
+// ============================================================
+window.salvarFin = async function() {
+  if (!_v('finDesc') || !_v('finValor')) {
+    toastWarn('Preencha descrição e valor');
+    return;
+  }
+
+  setLoading('btnSalvarFin', true);
+
+  try {
+    const p = {
+      tenantId:  J.tid,
+      tipo:      _v('finTipo'),
+      desc:      _v('finDesc'),
+      valor:     parseFloat(_v('finValor') || 0),
+      pgto:      _v('finPgto'),
+      venc:      _v('finVenc'),
+      status:    _v('finStatus'),
+      nota:      _v('finNota'),
+      updatedAt: new Date().toISOString()
+    };
+
+    const id = _v('finId');
+    if (id) {
+      await J.db.collection('financeiro').doc(id).update(p);
+      toastOk('Lançamento atualizado!');
+    } else {
+      p.createdAt = new Date().toISOString();
+      await J.db.collection('financeiro').add(p);
+      toastOk('Lançamento registrado!');
+    }
+
+    closeModal('modalFin');
+    audit('FINANCEIRO', `Lançou ${p.tipo}: ${p.desc} — ${moeda(p.valor)}`);
+  } catch (e) {
+    toastErr('Erro ao salvar: ' + e.message);
+  } finally {
+    setLoading('btnSalvarFin', false, 'Salvar');
+  }
+};
+
+// ============================================================
+// TOGGLE STATUS FINANCEIRO
+// ============================================================
+window.toggleStatusFin = async function(id, status) {
+  try {
+    const novo = status === 'Pago' ? 'Pendente' : 'Pago';
+    await J.db.collection('financeiro').doc(id).update({
+      status: novo,
+      updatedAt: new Date().toISOString()
+    });
+    toastOk(`Status atualizado → ${novo}`);
+  } catch (e) {
+    toastErr('Erro ao atualizar: ' + e.message);
+  }
+};
+
+// ============================================================
+// NF ENTRADA (COM PARCELAMENTO)
+// ============================================================
+window.prepNF = function() {
+  _sv('nfData',   new Date().toISOString().split('T')[0]);
+  _sv('nfNumero', '');
+  _sv('nfPgtoForma', 'Dinheiro');
+  _sv('nfVenc', new Date().toISOString().split('T')[0]);
+  _sv('nfParcelas', '1');
+  _sh('containerItensNF', '');
+  _st('nfTotal', '0,00');
+  _sh('divParcelasNF', '');
+  popularSelects();
+  adicionarItemNF();
+  openModal('modalNF');
+};
+
+// ============================================================
+// ADICIONAR ITEM NF
+// ============================================================
+window.adicionarItemNF = function() {
+  const div = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 70px 90px 90px 32px;gap:8px;align-items:center;margin-bottom:8px;';
+  div.innerHTML = `
+    <input class="input" placeholder="Descrição do item" oninput="_sugerirPecaNF(this)">
+    <input type="number" class="input" value="1" min="1"    oninput="calcNFTotal()">
+    <input type="number" class="input" value="0" step="0.01" placeholder="Custo"  oninput="calcNFTotal()">
+    <input type="number" class="input" value="0" step="0.01" placeholder="Venda"  oninput="calcNFTotal()">
+    <button type="button" class="btn btn-danger btn-icon" onclick="this.parentElement.remove();calcNFTotal()">✕</button>
+  `;
+  _$('containerItensNF').appendChild(div);
+};
+
+// ============================================================
+// SUGERIR PEÇA NF
+// ============================================================
+window._sugerirPecaNF = function(input) {
+  const val = input.value.toLowerCase().trim();
+  if (val.length < 3) return;
+  const existente = J.estoque.find(p => p.desc.toLowerCase().includes(val));
+  if (existente) {
+    const row = input.parentElement;
+    const custoEl = row.querySelectorAll('input')[2];
+    const vendaEl = row.querySelectorAll('input')[3];
+    if (custoEl && !parseFloat(custoEl.value)) custoEl.value = existente.custo || 0;
+    if (vendaEl && !parseFloat(vendaEl.value)) vendaEl.value = existente.venda || 0;
+    calcNFTotal();
+  }
+};
+
+// ============================================================
+// CALCULAR TOTAL NF
+// ============================================================
+window.calcNFTotal = function() {
+  let t = 0;
+  _$('containerItensNF')?.querySelectorAll(':scope > div').forEach(r => {
+    const qtd   = parseFloat(r.querySelectorAll('input')[1]?.value || 0);
+    const custo = parseFloat(r.querySelectorAll('input')[2]?.value || 0);
+    t += qtd * custo;
+  });
+  _st('nfTotal', t.toFixed(2).replace('.', ','));
+};
+
+// ============================================================
+// VERIFICAR PARCELAMENTO NF
+// ============================================================
+window.checkPgtoNF = function() {
+  const show = ['Parcelado', 'Boleto'].includes(_v('nfPgtoForma'));
+  const el   = _$('divParcelasNF');
+  if (el) el.classList.toggle('hidden', !show);
+};
+
+// ============================================================
+// SALVAR NF (COM PARCELAMENTO AUTOMÁTICO)
+// ============================================================
+window.salvarNF = async function() {
+  const itens = [];
+  _$('containerItensNF')?.querySelectorAll(':scope > div').forEach(r => {
+    const inputs = r.querySelectorAll('input');
+    const desc   = inputs[0]?.value?.trim();
+    if (desc) itens.push({
+      desc,
+      qtd:   parseFloat(inputs[1]?.value || 1),
+      custo: parseFloat(inputs[2]?.value || 0),
+      venda: parseFloat(inputs[3]?.value || 0)
+    });
+  });
+
+  if (!itens.length) {
+    toastWarn('Adicione pelo menos um item');
+    return;
+  }
+
+  setLoading('btnSalvarNF', true);
+
+  try {
+    const batch   = J.db.batch();
+    let totalNF   = 0;
+    const nfNum   = _v('nfNumero') || 's/n';
+    const fornec  = J.fornecedores.find(f => f.id === _v('nfFornec'));
+    const nPar    = parseInt(_v('nfParcelas') || 1);
+
+    // Processar itens de estoque
+    for (const item of itens) {
+      totalNF += item.qtd * item.custo;
+      const existente = J.estoque.find(p => p.desc.toLowerCase() === item.desc.toLowerCase());
+      
+      if (existente) {
+        batch.update(J.db.collection('estoqueItems').doc(existente.id), {
+          qtd:       (existente.qtd || 0) + item.qtd,
+          custo:     item.custo,
+          venda:     item.venda || existente.venda,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        batch.set(J.db.collection('estoqueItems').doc(), {
+          tenantId:  J.tid,
+          desc:      item.desc,
+          qtd:       item.qtd,
+          custo:     item.custo,
+          venda:     item.venda,
+          min:       2,
+          und:       'UN',
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+
+    // PARCELAMENTO: Criar N documentos financeiros
+    const formasPagas = ['Dinheiro', 'PIX'];
+    const stFin       = formasPagas.includes(_v('nfPgtoForma')) ? 'Pago' : 'Pendente';
+
+    for (let i = 0; i < nPar; i++) {
+      const d = new Date(_v('nfVenc') || new Date());
+      d.setMonth(d.getMonth() + i);
+      
+      batch.set(J.db.collection('financeiro').doc(), {
+        tenantId:  J.tid,
+        tipo:      'Saída',
+        status:    stFin,
+        desc:      `NF ${nfNum} — ${fornec?.nome || 'Fornecedor'} ${nPar > 1 ? `(${i+1}/${nPar})` : ''}`,
+        valor:     totalNF / nPar,
+        pgto:      _v('nfPgtoForma'),
+        venc:      d.toISOString().split('T')[0],
+        nfNum,
+        fornecedorId: _v('nfFornec') || null,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    await batch.commit();
+    toastOk(`NF processada — ${itens.length} itens + ${nPar} parcela(s)!`);
+    closeModal('modalNF');
+    audit('ESTOQUE/NF', `Entrada NF ${nfNum} — ${moeda(totalNF)} em ${nPar}x`);
+  } catch (e) {
+    toastErr('Erro ao processar NF: ' + e.message);
+  } finally {
+    setLoading('btnSalvarNF', false, 'FINALIZAR ENTRADA');
+  }
+};
+
+// ============================================================
+// COMISSÕES (painel admin)
+// ============================================================
+window.calcComissoes = function() {
+  const comissoes = {};
+  J.equipe.forEach(f => {
+    comissoes[f.id] = { nome: f.nome, cargo: f.cargo, val: 0 };
+  });
+
+  J.financeiro
+    .filter(f => f.isComissao && f.mecId && f.status === 'Pendente')
+    .forEach(f => {
+      if (comissoes[f.mecId]) comissoes[f.mecId].val += f.valor || 0;
+    });
+
+  const lista = Object.values(comissoes).filter(c => c.val > 0);
+  const el    = _$('boxComissoes');
+  if (!el) return;
+
+  el.innerHTML = lista.map(c => `
+    <div class="com-card">
+      <div>
+        <div class="com-name">${c.nome}</div>
+        <div class="com-label">A PAGAR — ${JARVIS_CONST.CARGOS[c.cargo] || c.cargo || 'Mecânico'}</div>
+      </div>
+      <div class="com-value">${moeda(c.val)}</div>
+    </div>
+  `).join('') || `<div class="empty-state" style="padding:24px">
+      <div class="empty-state-icon">✅</div>
+      <div class="empty-state-sub">Sem comissões pendentes</div>
+    </div>`;
+};
+
+// ============================================================
+// RENDERIZAR COMISSÕES (painel equipe)
+// ============================================================
+window.renderComissoes = function(fins) {
+  const total = fins.filter(f => f.status === 'Pendente').reduce((a, f) => a + (f.valor || 0), 0);
+  const pago  = fins.filter(f => f.status === 'Pago').reduce((a, f) => a + (f.valor || 0), 0);
+  const kEl   = _$('kComPend');
+  if (kEl) kEl.textContent = moeda(total);
+
+  const boxEl = _$('boxComissaoDetalhada');
+  if (!boxEl) return;
+
+  boxEl.innerHTML = `
+    <div class="dre-cards" style="margin-bottom:20px">
+      <div class="dre-card entradas">
+        <div class="dre-label">A RECEBER</div>
+        <div class="dre-value">${moeda(total)}</div>
+      </div>
+      <div class="dre-card" style="border:1px solid var(--border);border-radius:var(--r-xl);padding:20px;text-align:center">
+        <div class="dre-label">JÁ RECEBIDO</div>
+        <div class="dre-value" style="color:var(--text-secondary)">${moeda(pago)}</div>
+      </div>
+      <div class="dre-card" style="border:1px solid var(--border);border-radius:var(--r-xl);padding:20px;text-align:center">
+        <div class="dre-label">TOTAL HISTÓRICO</div>
+        <div class="dre-value" style="color:var(--brand)">${moeda(total + pago)}</div>
+      </div>
+    </div>
+    <div style="font-family:var(--ff-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">DETALHAMENTO POR O.S.</div>
+    ${fins.length ? fins.map(f => `
+      <div class="com-card">
+        <div>
+          <div class="com-name" style="font-size:0.84rem">${f.desc || '—'}</div>
+          <div class="com-label">${dtBr(f.venc)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="com-value" style="font-size:1rem;color:${f.status === 'Pago' ? 'var(--text-muted)' : 'var(--success)'}">${moeda(f.valor)}</div>
+          <span style="background-color:${f.status === 'Pago' ? '#22D3A020' : '#F59E0B20'};color:${f.status === 'Pago' ? '#22D3A0' : '#F59E0B'};padding:2px 6px;border-radius:3px;font-size:0.7rem">${f.status}</span>
+        </div>
+      </div>
+    `).join('') : `<div class="empty-state"><div class="empty-state-icon">💰</div><div class="empty-state-sub">Nenhuma comissão registrada</div></div>`}
+  `;
+};

@@ -1,335 +1,159 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-bs-theme="dark">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERP Master - Login Seguro</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    
-    <link rel="stylesheet" href="css/design.css">
-
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-    <style>
-        /* Estilos Exclusivos para a Tela de Login (Garante que fique centralizado e premium) */
-        body, html {
-            height: 100%;
-            background-color: var(--bg-darker) !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .login-container {
-            width: 100%;
-            max-width: 420px;
-            padding: 15px;
-            z-index: 2;
-        }
-
-        .login-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-            padding: 40px 30px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Detalhe de Design: Linha de energia no topo do card */
-        .login-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, #0ea5e9, #3b82f6);
-        }
-
-        /* Spinner de Carregamento Sobreposto */
-        #login-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(2, 6, 23, 0.85);
-            backdrop-filter: blur(4px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-
-        .form-control-login {
-            background-color: var(--bg-black);
-            border: 1px solid var(--border-color);
-            color: #fff;
-            padding: 12px 15px;
-            transition: all 0.3s;
-        }
-
-        .form-control-login:focus {
-            background-color: var(--bg-black);
-            border-color: #0ea5e9;
-            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
-            color: #fff;
-        }
-
-        .password-toggle {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            color: #64748b;
-            transition: 0.2s;
-        }
-
-        .password-toggle:hover {
-            color: #0ea5e9;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>JARVIS ERP — Acesso</title>
+  <link rel="stylesheet" href="css/design.css">
+  <style>
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+      animation: gridDrift 30s linear infinite;
+    }
+    .login-page {
+      position: relative;
+      z-index: 1;
+    }
+  </style>
 </head>
 <body>
+  <div id="toast-container"></div>
 
-    <div class="login-container">
-        <div class="text-center mb-4">
-            <i class="bi bi-car-front-fill text-info" style="font-size: 3rem;"></i>
-            <h2 class="fw-bold text-white mt-2 mb-0">ERP Master</h2>
-            <p class="text-white-50 small">Gestão Automotiva Inteligente</p>
+  <div class="login-page">
+    <div class="login-card" style="animation: modal-in .3s ease">
+      <!-- LOGO -->
+      <div class="login-logo-wrap">
+        <div class="login-logo-mark brand-logo-mark">J</div>
+        <div class="login-title brand-name">JARVIS ERP</div>
+        <div class="login-sub brand-tagline">Gestão Automotiva Inteligente</div>
+      </div>
+
+      <!-- TABS -->
+      <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+        <button class="btn btn-ghost" id="tabMaster" onclick="switchTab('master')" style="flex:1;border-radius:0;border-bottom:2px solid var(--brand);background:transparent">Master</button>
+        <button class="btn btn-ghost" id="tabEquipe" onclick="switchTab('equipe')" style="flex:1;border-radius:0;border-bottom:2px solid transparent;background:transparent">Equipe</button>
+        <button class="btn btn-ghost" id="tabPin"    onclick="switchTab('pin')"    style="flex:1;border-radius:0;border-bottom:2px solid transparent;background:transparent">PIN</button>
+      </div>
+
+      <!-- MASTER LOGIN -->
+      <div id="masterTab" class="login-tab">
+        <div id="loginErr" class="login-err">Usuário ou senha incorretos.</div>
+        <div class="form-group">
+          <label class="form-label">Usuário de acesso</label>
+          <input class="input input-mono" id="usr" type="text" placeholder="seu.usuario" autocomplete="off" spellcheck="false">
         </div>
-
-        <div class="login-card">
-            
-            <div id="login-overlay" class="d-none">
-                <div class="spinner-border text-info mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
-                <h6 class="text-white fw-bold" id="loading-text">Autenticando...</h6>
-            </div>
-
-            <div id="alerta-erro" class="alert alert-danger d-none py-2 px-3 small fw-bold border-0 bg-danger bg-opacity-25 text-danger border-start border-4 border-danger mb-4" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i> <span id="texto-erro">Erro ao entrar.</span>
-            </div>
-
-            <form id="form-login">
-                <div class="mb-3">
-                    <label class="form-label text-white-50 small fw-bold">E-mail Corporativo</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-black border-secondary text-info"><i class="bi bi-envelope-fill"></i></span>
-                        <input type="email" class="form-control form-control-login" id="email" placeholder="gestor@oficina.com.br" required autocomplete="email">
-                    </div>
-                </div>
-
-                <div class="mb-4 position-relative">
-                    <div class="d-flex justify-content-between align-items-end mb-1">
-                        <label class="form-label text-white-50 small fw-bold mb-0">Palavra-passe</label>
-                        <a href="#" class="text-info small text-decoration-none" onclick="recuperarSenha()">Esqueci a senha</a>
-                    </div>
-                    <div class="input-group position-relative">
-                        <span class="input-group-text bg-black border-secondary text-warning"><i class="bi bi-lock-fill"></i></span>
-                        <input type="password" class="form-control form-control-login pe-5" id="senha" placeholder="••••••••" required autocomplete="current-password">
-                        <i class="bi bi-eye-fill password-toggle" id="toggle-senha" onclick="togglePassword()"></i>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-info w-100 py-3 fw-bold shadow-lg text-dark fs-5 mb-3" id="btn-entrar">
-                    ACESSAR SISTEMA <i class="bi bi-arrow-right-circle ms-1"></i>
-                </button>
-            </form>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <div class="pwd-wrap">
+            <input class="input" id="pwd" type="password" placeholder="••••••••">
+            <button class="pwd-toggle" type="button" onclick="_togglePwd()" id="pwdToggle" title="Ver senha">👁</button>
+          </div>
         </div>
+        <button class="btn btn-brand btn-xl btn-full" id="btnLogin" onclick="autenticar()" style="margin-top:8px">
+          Entrar no Sistema
+        </button>
+      </div>
+
+      <!-- EQUIPE LOGIN -->
+      <div id="equipeTab" class="login-tab" style="display:none">
+        <div id="loginErrEquipe" class="login-err">Usuário ou senha incorretos.</div>
+        <div class="form-group">
+          <label class="form-label">Usuário</label>
+          <input class="input input-mono" id="usrEquipe" type="text" placeholder="seu.usuario" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <div class="pwd-wrap">
+            <input class="input" id="pwdEquipe" type="password" placeholder="••••••••">
+            <button class="pwd-toggle" type="button" onclick="_togglePwdEquipe()" id="pwdToggleEquipe" title="Ver senha">👁</button>
+          </div>
+        </div>
+        <button class="btn btn-brand btn-xl btn-full" id="btnLoginEquipe" onclick="autenticarEquipe()" style="margin-top:8px">
+          Entrar como Equipe
+        </button>
+      </div>
+
+      <!-- PIN LOGIN -->
+      <div id="pinTab" class="login-tab" style="display:none">
+        <div id="loginErrPin" class="login-err">Usuário ou PIN incorreto.</div>
+        <div class="form-group">
+          <label class="form-label">Usuário</label>
+          <input class="input input-mono" id="usrPin" type="text" placeholder="seu.usuario" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+          <label class="form-label">PIN (4 dígitos)</label>
+          <input class="input" id="pinInput" type="password" placeholder="0000" maxlength="4" style="text-align:center;font-size:1.5rem;letter-spacing:0.2em">
+        </div>
+        <button class="btn btn-brand btn-xl btn-full" id="btnLoginPin" onclick="autenticarComPIN()" style="margin-top:8px">
+          Entrar com PIN
+        </button>
+      </div>
+
+      <!-- FOOTER -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="status-dot online"></div>
+        <span style="font-family:var(--ff-mono);font-size:.62rem;color:var(--text-muted)">SISTEMA OPERACIONAL</span>
+      </div>
+      <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;font-family:var(--ff-mono);font-size:.6rem;color:var(--text-disabled)">
+        <span class="brand-footer">Powered by thIAguinho Soluções · 2026</span>
+      </div>
     </div>
+  </div>
 
-    <script>
-        // ============================================================================
-        // 1. INICIALIZAÇÃO SEGURA DO FIREBASE (Mesmas chaves do core.js)
-        // ============================================================================
-        const firebaseConfig = {
-            // ATENÇÃO: Substitua pelas chaves reais do seu projeto
-            apiKey: "AIzaSy_SUA_CHAVE_AQUI",
-            authDomain: "seu-erp-master.firebaseapp.com",
-            projectId: "seu-erp-master",
-            storageBucket: "seu-erp-master.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
-        };
+  <!-- FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+  <!-- SCRIPTS -->
+  <script src="js/config.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/auth.js"></script>
 
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+  <script>
+    /**
+     * Helpers de UI exclusivos do index.html.
+     * Funções de autenticação (autenticar, autenticarEquipe, autenticarComPIN)
+     * e todos os listeners de teclado estão em js/auth.js.
+     * NÃO adicionar lógica de autenticação ou listeners duplicados aqui.
+     */
 
-        // Elementos da UI
-        const overlay = document.getElementById('login-overlay');
-        const alertBox = document.getElementById('alerta-erro');
-        const alertText = document.getElementById('texto-erro');
-        const loadingText = document.getElementById('loading-text');
+    // Troca de abas
+    function switchTab(tab) {
+      document.querySelectorAll('.login-tab').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('[id$="Tab"]').forEach(el => el.style.borderBottomColor = 'transparent');
 
-        // ============================================================================
-        // 2. VERIFICAR SE O USUÁRIO JÁ ESTÁ LOGADO (Redirecionamento Automático)
-        // ============================================================================
-        document.addEventListener('DOMContentLoaded', () => {
-            // Mostra o spinner enquanto o Firebase decide se a sessão antiga ainda é válida
-            mostrarCarregamento("Verificando sessão...");
-            
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    console.log("Sessão ativa encontrada. Redirecionando para o sistema...");
-                    // Valida rapidamente se a oficina não está bloqueada antes de redirecionar
-                    await validarAcessoERedirecionar(user.uid);
-                } else {
-                    // Ninguém logado, libera a tela para o usuário digitar
-                    ocultarCarregamento();
-                }
-            });
-        });
+      document.getElementById(tab + 'Tab').style.display = 'block';
+      document.getElementById('tab' + (tab === 'master' ? 'Master' : tab === 'equipe' ? 'Equipe' : 'Pin')).style.borderBottomColor = 'var(--brand)';
 
-        // ============================================================================
-        // 3. LÓGICA DE SUBMISSÃO DO FORMULÁRIO (LOGIN)
-        // ============================================================================
-        document.getElementById('form-login').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            ocultarErro();
-            
-            const email = document.getElementById('email').value.trim();
-            const senha = document.getElementById('senha').value;
+      if (tab === 'master')       document.getElementById('usr')?.focus();
+      else if (tab === 'equipe')  document.getElementById('usrEquipe')?.focus();
+      else                        document.getElementById('usrPin')?.focus();
+    }
 
-            if(!email || !senha) return;
+    // Toggle visibilidade senha — aba Master
+    function _togglePwd() {
+      const pwd = document.getElementById('pwd');
+      const btn = document.getElementById('pwdToggle');
+      if (!pwd || !btn) return;
+      pwd.type = pwd.type === 'password' ? 'text' : 'password';
+      btn.textContent = pwd.type === 'password' ? '👁' : '🙈';
+    }
 
-            mostrarCarregamento("Autenticando credenciais...");
-
-            try {
-                // Tenta logar no Firebase Auth
-                const credencial = await auth.signInWithEmailAndPassword(email, senha);
-                
-                // Sucesso na senha, agora valida no banco de dados (SaaS / Tenant)
-                await validarAcessoERedirecionar(credencial.user.uid);
-
-            } catch (error) {
-                ocultarCarregamento();
-                tratarErroLogin(error.code);
-            }
-        });
-
-        // ============================================================================
-        // 4. VALIDAÇÃO DE SEGURANÇA E BLOQUEIOS (A Magia do SaaS)
-        // ============================================================================
-        async function validarAcessoERedirecionar(uid) {
-            try {
-                loadingText.innerText = "Carregando ambiente da oficina...";
-
-                // 1. Puxa os dados do usuário
-                const userDoc = await db.collection("usuarios").doc(uid).get();
-                if (!userDoc.exists) {
-                    throw new Error("Perfil de usuário não encontrado no sistema.");
-                }
-
-                const userData = userDoc.data();
-
-                // 2. Verifica se a oficina (Tenant) pagou a mensalidade
-                const tenantDoc = await db.collection("tenants").doc(userData.tenantId).get();
-                if (!tenantDoc.exists || tenantDoc.data().status === "bloqueado") {
-                    throw new Error("SISTEMA BLOQUEADO. A assinatura desta oficina encontra-se suspensa.");
-                }
-
-                // 3. Tudo Certo! Joga o usuário para o coração do sistema.
-                window.location.href = "jarvis.html";
-
-            } catch (error) {
-                // Se der qualquer erro de segurança, desloga imediatamente e avisa
-                await auth.signOut();
-                ocultarCarregamento();
-                mostrarErro(error.message);
-            }
-        }
-
-        // ============================================================================
-        // 5. FUNÇÕES DE UTILIDADE E INTERFACE
-        // ============================================================================
-        
-        // Alternar visualização da senha (Olho)
-        function togglePassword() {
-            const input = document.getElementById('senha');
-            const icon = document.getElementById('toggle-senha');
-            
-            if (input.type === "password") {
-                input.type = "text";
-                icon.classList.replace("bi-eye-fill", "bi-eye-slash-fill");
-                icon.classList.add("text-info");
-            } else {
-                input.type = "password";
-                icon.classList.replace("bi-eye-slash-fill", "bi-eye-fill");
-                icon.classList.remove("text-info");
-            }
-        }
-
-        // Recuperação de Senha Segura
-        async function recuperarSenha() {
-            const email = document.getElementById('email').value.trim();
-            if (!email) {
-                mostrarErro("Por favor, digite o seu E-mail no campo acima para recuperar a palavra-passe.");
-                return;
-            }
-
-            try {
-                await auth.sendPasswordResetEmail(email);
-                alertBox.classList.replace('alert-danger', 'alert-success');
-                alertBox.classList.replace('text-danger', 'text-success');
-                alertBox.classList.replace('bg-danger', 'bg-success');
-                mostrarErro(`Um link de recuperação foi enviado para: ${email}`);
-            } catch (error) {
-                tratarErroLogin(error.code);
-            }
-        }
-
-        function mostrarCarregamento(texto) {
-            loadingText.innerText = texto;
-            overlay.classList.remove('d-none');
-        }
-
-        function ocultarCarregamento() {
-            overlay.classList.add('d-none');
-        }
-
-        function mostrarErro(mensagem) {
-            alertText.innerText = mensagem;
-            alertBox.classList.remove('d-none');
-        }
-
-        function ocultarErro() {
-            alertBox.classList.add('d-none');
-            // Reseta cores caso tenha vindo da recuperação de senha
-            alertBox.classList.remove('alert-success', 'text-success', 'bg-success');
-            alertBox.classList.add('alert-danger', 'text-danger', 'bg-danger');
-        }
-
-        function tratarErroLogin(errorCode) {
-            let msg = "Ocorreu um erro desconhecido. Tente novamente.";
-            switch(errorCode) {
-                case 'auth/user-not-found':
-                    msg = "E-mail não cadastrado no sistema.";
-                    break;
-                case 'auth/wrong-password':
-                    msg = "Palavra-passe incorreta. Tente novamente.";
-                    break;
-                case 'auth/invalid-email':
-                    msg = "O formato do e-mail é inválido.";
-                    break;
-                case 'auth/user-disabled':
-                    msg = "Este utilizador foi desativado pelo administrador.";
-                    break;
-                case 'auth/too-many-requests':
-                    msg = "Muitas tentativas falhadas. Conta bloqueada temporariamente.";
-                    break;
-            }
-            mostrarErro(msg);
-        }
-    </script>
+    // Toggle visibilidade senha — aba Equipe
+    function _togglePwdEquipe() {
+      const pwd = document.getElementById('pwdEquipe');
+      const btn = document.getElementById('pwdToggleEquipe');
+      if (!pwd || !btn) return;
+      pwd.type = pwd.type === 'password' ? 'text' : 'password';
+      btn.textContent = pwd.type === 'password' ? '👁' : '🙈';
+    }
+  </script>
 </body>
 </html>
