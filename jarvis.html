@@ -1,362 +1,162 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>JARVIS ERP — Dashboard</title>
-  <link rel="stylesheet" href="css/design.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis - Painel Master</title>
+    <style>
+        /* Estilos Básicos do Dashboard */
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f3f4f6; display: flex; height: 100vh; overflow: hidden; }
+        #sidebar { width: 250px; background: #1f2937; color: white; display: flex; flex-direction: column; }
+        .brand { padding: 1.5rem; font-size: 1.5rem; font-weight: bold; border-bottom: 1px solid #374151; }
+        .menu { flex: 1; padding: 1rem 0; }
+        .menu-item { padding: 1rem 1.5rem; cursor: pointer; transition: background 0.2s; display: block; color: #d1d5db; text-decoration: none; }
+        .menu-item:hover, .menu-item.active { background: #374151; color: white; }
+        #main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        header { background: white; padding: 1rem 2rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        #content-area { flex: 1; padding: 2rem; overflow-y: auto; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        .hidden { display: none !important; }
+        button.logout { background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    </style>
 </head>
-<body onload="initCore()">
-  <div id="toast-container"></div>
+<body>
 
-  <!-- SIDEBAR -->
-  <div style="display:flex;height:100vh">
-    <div style="width:250px;background:var(--bg-secondary);border-right:1px solid var(--border);overflow-y:auto;padding:var(--spacing-lg)">
-      <div style="margin-bottom:var(--spacing-2xl)">
-        <div style="width:48px;height:48px;background:linear-gradient(135deg,var(--brand),var(--brand-dark));border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:white;margin-bottom:var(--spacing-md)">J</div>
-        <div style="font-weight:700;font-size:var(--fs-sm)" id="sbTenantNome">Oficina</div>
-        <div style="font-size:var(--fs-xs);color:var(--text-muted)" id="sbUserNome">Usuário</div>
-      </div>
-
-      <nav style="display:flex;flex-direction:column;gap:var(--spacing-sm)">
-        <a href="#" onclick="showSection('dashboard')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">📊 Dashboard</a>
-        <a href="#" onclick="showSection('kanban')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">📋 Ordens de Serviço</a>
-        <a href="#" onclick="showSection('financeiro')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">💰 Financeiro</a>
-        <a href="#" onclick="showSection('ia')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">🤖 IA Assistente</a>
-        <a href="#" onclick="showSection('estoque')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">📦 Estoque</a>
-        <a href="#" onclick="showSection('clientes')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">👥 Clientes</a>
-        <a href="#" onclick="showSection('equipe')" class="nav-item" style="padding:var(--spacing-md);border-radius:var(--r-md);text-decoration:none;color:var(--text-secondary);transition:var(--transition)">👨‍💼 Equipe</a>
-      </nav>
-
-      <div style="margin-top:var(--spacing-2xl);padding-top:var(--spacing-lg);border-top:1px solid var(--border)">
-        <button class="btn btn-ghost btn-full" onclick="fazerLogout()" style="justify-content:flex-start">🚪 Sair</button>
-      </div>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <div style="flex:1;overflow-y:auto;background:var(--bg-primary)">
-      <!-- TOPBAR -->
-      <div style="background:var(--bg-secondary);border-bottom:1px solid var(--border);padding:var(--spacing-lg);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100">
-        <div style="font-size:var(--fs-lg);font-weight:700" id="topTitle">Dashboard</div>
-        <div style="display:flex;gap:var(--spacing-md);align-items:center">
-          <span style="font-size:var(--fs-sm);color:var(--text-muted)">Bem-vindo, <strong id="sbUserRole">ADMIN</strong></span>
-          <div style="width:36px;height:36px;background:var(--brand);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:var(--fs-lg)" id="sbAvatar">J</div>
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="brand">Jarvis AI</div>
+        <div class="menu">
+            <a class="menu-item active" onclick="loadView('dashboard')">Dashboard</a>
+            <a class="menu-item" onclick="loadView('os')">Ordens de Serviço</a>
+            <a class="menu-item" onclick="loadView('clientes')">Clientes</a>
+            <a class="menu-item" onclick="loadView('financeiro')">Financeiro</a>
+            <a class="menu-item" onclick="loadView('3d')">Visualizador 3D</a>
+            <a class="menu-item" onclick="logout()">Sair</a>
         </div>
-      </div>
+    </nav>
 
-      <!-- SECTIONS -->
-      <div style="padding:var(--spacing-2xl)">
-        <!-- DASHBOARD -->
-        <div id="dashboardSection" class="section">
-          <h1 style="margin-bottom:var(--spacing-xl)">📊 Dashboard</h1>
-          <div id="dashboardContainer"></div>
-        </div>
-
-        <!-- KANBAN -->
-        <div id="kanbanSection" class="section" style="display:none">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-xl)">
-            <h1>📋 Ordens de Serviço</h1>
-            <button class="btn btn-brand" onclick="prepOS();openModal('modalOS')">+ Nova O.S.</button>
-          </div>
-          <div id="kanbanContainer"></div>
-        </div>
-
-        <!-- FINANCEIRO -->
-        <div id="financeiroSection" class="section" style="display:none">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-xl)">
-            <h1>💰 Financeiro</h1>
-            <div style="display:flex;gap:var(--spacing-md)">
-              <button class="btn btn-brand" onclick="prepFin();openModal('modalFin')">+ Lançamento</button>
-              <button class="btn btn-primary" onclick="prepNF();openModal('modalNF')">📄 NF Entrada</button>
+    <!-- Conteúdo Principal -->
+    <main id="main-content">
+        <header>
+            <h2 id="page-title">Dashboard</h2>
+            <div id="user-info">
+                <span id="user-name">Carregando...</span>
+                <button class="logout" onclick="logout()">Sair</button>
             </div>
-          </div>
-
-          <!-- DRE -->
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--spacing-lg);margin-bottom:var(--spacing-2xl)">
-            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--spacing-lg)">
-              <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--spacing-sm)">ENTRADAS</div>
-              <div style="font-size:var(--fs-2xl);font-weight:700;color:var(--success)" id="dreEntradas">R$ 0,00</div>
+        </header>
+        
+        <div id="content-area">
+            <!-- Views serão injetadas aqui -->
+            <div id="view-dashboard" class="view-section">
+                <div class="card">
+                    <h3>Bem-vindo ao Sistema</h3>
+                    <p>Selecione uma opção no menu lateral.</p>
+                    <div id="stats-container" style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <!-- Stats dinâmicos -->
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Atalhos Rápidos</h3>
+                    <button onclick="alert('Função Nova OS')">+ Nova OS</button>
+                    <button onclick="alert('Função Novo Cliente')">+ Novo Cliente</button>
+                </div>
             </div>
-            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--spacing-lg)">
-              <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--spacing-sm)">SAÍDAS</div>
-              <div style="font-size:var(--fs-2xl);font-weight:700;color:var(--danger)" id="dreSaidas">R$ 0,00</div>
+            
+            <div id="view-os" class="view-section hidden">
+                <div class="card"><h3>Gestão de Ordens de Serviço</h3><p>Conteúdo carregado dinamicamente...</p></div>
             </div>
-            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--spacing-lg)">
-              <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--spacing-sm)">SALDO</div>
-              <div style="font-size:var(--fs-2xl);font-weight:700" id="dreSaldo">R$ 0,00</div>
+            
+            <div id="view-3d" class="view-section hidden">
+                <div class="card" style="height: 400px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center;">
+                    <div id="canvas-container">Área do Three.js</div>
+                </div>
             </div>
-          </div>
-
-          <!-- TABELA -->
-          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Tipo</th>
-                  <th>Descrição</th>
-                  <th>Forma</th>
-                  <th>Valor</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tbFinanceiro"></tbody>
-            </table>
-          </div>
         </div>
+    </main>
 
-        <!-- IA -->
-        <div id="iaSection" class="section" style="display:none">
-          <h1 style="margin-bottom:var(--spacing-xl)">🤖 IA Assistente</h1>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--spacing-lg);margin-bottom:var(--spacing-xl)">
-            <button class="btn btn-primary btn-full" onclick="iaAnalisarDRE()" style="justify-content:center">📊 Analisar DRE</button>
-            <button class="btn btn-primary btn-full" onclick="iaAnalisarEstoque()" style="justify-content:center">📦 Analisar Estoque</button>
-          </div>
-          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--spacing-lg);height:400px;display:flex;flex-direction:column">
-            <div id="iaMsgs" style="flex:1;overflow-y:auto;margin-bottom:var(--spacing-lg);display:flex;flex-direction:column;gap:var(--spacing-md)"></div>
-            <div style="display:flex;gap:var(--spacing-sm)">
-              <input class="input" id="iaInput" type="text" placeholder="Faça uma pergunta...">
-              <button class="btn btn-brand" onclick="iaPerguntar()">Enviar</button>
-            </div>
-          </div>
-        </div>
+    <!-- FIREBASE & CORE -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="js/config.js"></script>
+    
+    <script>
+        // 1. Validação de Sessão Imediata
+        (function checkSession() {
+            const tid = sessionStorage.getItem('J.tid');
+            const userStr = sessionStorage.getItem('J.user');
+            
+            if (!tid || !userStr) {
+                console.warn('[JARVIS] Sessão inválida. Redirecionando...');
+                window.location.href = 'index.html';
+                return;
+            }
 
-        <!-- ESTOQUE -->
-        <div id="estoqueSection" class="section" style="display:none">
-          <h1 style="margin-bottom:var(--spacing-xl)">📦 Estoque</h1>
-          <button class="btn btn-brand" onclick="prepEstoque();openModal('modalEstoque')" style="margin-bottom:var(--spacing-lg)">+ Novo Item</button>
-          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
-            <table>
-              <thead>
-                <tr>
-                  <th>Descrição</th>
-                  <th>Qtd</th>
-                  <th>Mín</th>
-                  <th>Custo</th>
-                  <th>Venda</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tbEstoque"></tbody>
-            </table>
-          </div>
-        </div>
+            const user = JSON.parse(userStr);
+            document.getElementById('user-name').innerText = user.nomeFantasia || user.nome || 'Usuário';
+            
+            // Inicializa Firebase se necessário
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            
+            console.log('[JARVIS] Sessão válida para:', user.nomeFantasia);
+            loadDashboardData();
+        })();
 
-        <!-- CLIENTES -->
-        <div id="clientesSection" class="section" style="display:none">
-          <h1 style="margin-bottom:var(--spacing-xl)">👥 Clientes</h1>
-          <button class="btn btn-brand" onclick="prepCliente();openModal('modalCliente')" style="margin-bottom:var(--spacing-lg)">+ Novo Cliente</button>
-          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Email</th>
-                  <th>Telefone</th>
-                  <th>CPF</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tbClientes"></tbody>
-            </table>
-          </div>
-        </div>
+        // 2. Funções de Navegação
+        function loadView(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
+            const target = document.getElementById(`view-${viewName}`);
+            if (target) {
+                target.classList.remove('hidden');
+                document.getElementById('page-title').innerText = viewName.toUpperCase();
+            }
 
-        <!-- EQUIPE -->
-        <div id="equipeSection" class="section" style="display:none">
-          <h1 style="margin-bottom:var(--spacing-xl)">👨‍💼 Equipe</h1>
-          <button class="btn btn-brand" onclick="prepEquipe();openModal('modalEquipe')" style="margin-bottom:var(--spacing-lg)">+ Novo Funcionário</button>
-          <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Cargo</th>
-                  <th>Email</th>
-                  <th>Telefone</th>
-                  <th>Comissão</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tbEquipe"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+            // Carrega módulos específicos se necessário
+            if (viewName === '3d') {
+                init3DEngine();
+            }
+        }
 
-  <!-- MODALS -->
-  <div id="modalOS" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">Ordem de Serviço</div>
-      <input type="hidden" id="osId">
-      <div class="form-group">
-        <label class="form-label">Cliente</label>
-        <select class="input" id="osCliente" onchange="filtrarVeiculosOS()"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Veículo</label>
-        <select class="input" id="osVeiculo"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Mecânico</label>
-        <select class="input" id="osMec"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descrição</label>
-        <textarea class="input" id="osDesc" style="min-height:100px"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Valor Total</label>
-        <input class="input" id="osTotal" type="number" step="0.01">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Data</label>
-        <input class="input" id="osData" type="date">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Status</label>
-        <select class="input" id="osStatus"></select>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeModal('modalOS')">Cancelar</button>
-        <button class="btn btn-brand" id="btnSalvarOS" onclick="salvarOS()">Salvar</button>
-      </div>
-    </div>
-  </div>
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        }
 
-  <div id="modalFin" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">Lançamento Financeiro</div>
-      <input type="hidden" id="finId">
-      <div class="form-group">
-        <label class="form-label">Tipo</label>
-        <select class="input" id="finTipo">
-          <option value="Entrada">Entrada</option>
-          <option value="Saída">Saída</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descrição</label>
-        <input class="input" id="finDesc" type="text">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Valor</label>
-        <input class="input" id="finValor" type="number" step="0.01">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Forma de Pagamento</label>
-        <select class="input" id="finPgto"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Vencimento</label>
-        <input class="input" id="finVenc" type="date">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Status</label>
-        <select class="input" id="finStatus">
-          <option value="Pago">Pago</option>
-          <option value="Pendente">Pendente</option>
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeModal('modalFin')">Cancelar</button>
-        <button class="btn btn-brand" id="btnSalvarFin" onclick="salvarFin()">Salvar</button>
-      </div>
-    </div>
-  </div>
+        // 3. Carregamento de Dados
+        async function loadDashboardData() {
+            const tid = sessionStorage.getItem('J.tid');
+            const db = firebase.firestore();
+            
+            try {
+                // Exemplo: Busca quantidade de OS abertas
+                const osCount = await db.collection('os').where('tenantId', '==', tid).where('status', '==', 'Aberto').get();
+                
+                const statsHTML = `
+                    <div style="padding: 1rem; background: #eff6ff; border-radius: 6px; flex: 1;">
+                        <strong>${osCount.size}</strong> OS Abertas
+                    </div>
+                    <div style="padding: 1rem; background: #f0fdf4; border-radius: 6px; flex: 1;">
+                        <strong>R$ 0,00</strong> Faturamento Mês
+                    </div>
+                `;
+                document.getElementById('stats-container').innerHTML = statsHTML;
+            } catch (e) {
+                console.error("Erro ao carregar dashboard:", e);
+            }
+        }
 
-  <div id="modalNF" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">Entrada de NF</div>
-      <div class="form-group">
-        <label class="form-label">Número NF</label>
-        <input class="input" id="nfNumero" type="text">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Fornecedor</label>
-        <select class="input" id="nfFornec"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Data</label>
-        <input class="input" id="nfData" type="date">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Vencimento</label>
-        <input class="input" id="nfVenc" type="date">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Forma de Pagamento</label>
-        <select class="input" id="nfPgtoForma" onchange="checkPgtoNF()">
-          <option value="Dinheiro">Dinheiro</option>
-          <option value="PIX">PIX</option>
-          <option value="Boleto">Boleto</option>
-          <option value="Parcelado">Parcelado</option>
-        </select>
-      </div>
-      <div id="divParcelasNF" class="form-group hidden">
-        <label class="form-label">Número de Parcelas</label>
-        <input class="input" id="nfParcelas" type="number" value="1" min="1" max="12">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Itens</label>
-        <div id="containerItensNF"></div>
-        <button type="button" class="btn btn-ghost btn-full" onclick="adicionarItemNF()" style="margin-top:var(--spacing-md)">+ Adicionar Item</button>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Total</label>
-        <div style="font-size:var(--fs-xl);font-weight:700;color:var(--success)" id="nfTotal">0,00</div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeModal('modalNF')">Cancelar</button>
-        <button class="btn btn-brand" id="btnSalvarNF" onclick="salvarNF()">FINALIZAR ENTRADA</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- FIREBASE -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <!-- SCRIPTS -->
-  <script src="js/config.js"></script>
-  <script src="js/core.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/os.js"></script>
-  <script src="js/financeiro.js"></script>
-  <script src="js/ia.js"></script>
-
-  <script>
-    function showSection(section) {
-      document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
-      document.getElementById(section + 'Section').style.display = 'block';
-      
-      const titles = {
-        dashboard: '📊 Dashboard',
-        kanban: '📋 Ordens de Serviço',
-        financeiro: '💰 Financeiro',
-        ia: '🤖 IA Assistente',
-        estoque: '📦 Estoque',
-        clientes: '👥 Clientes',
-        equipe: '👨‍💼 Equipe'
-      };
-      document.getElementById('topTitle').textContent = titles[section] || 'Dashboard';
-    }
-
-    // Populate selects
-    document.addEventListener('DOMContentLoaded', () => {
-      const statusOpts = JARVIS_CONST.STATUS_OS.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
-      document.getElementById('osStatus').innerHTML = statusOpts;
-
-      const pgtoOpts = JARVIS_CONST.FORMAS_PGTO.map(p => `<option value="${p.value}">${p.label}</option>`).join('');
-      document.getElementById('finPgto').innerHTML = pgtoOpts;
-
-      renderDashboard();
-      renderKanban();
-      renderFinanceiro();
-    });
-  </script>
+        // 4. Engine 3D (Placeholder seguro)
+        function init3DEngine() {
+            console.log("[3D] Iniciando motor gráfico...");
+            // Aqui entraria a lógica do Three.js se o script fosse carregado
+            // Para não quebrar, mantemos simples se a lib não existir
+            if (typeof THREE === 'undefined') {
+                document.getElementById('canvas-container').innerHTML = "Biblioteca Three.js não carregada.";
+            }
+        }
+    </script>
 </body>
 </html>
