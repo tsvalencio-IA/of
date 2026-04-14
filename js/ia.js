@@ -1,16 +1,15 @@
 /**
- * JARVIS ERP V2 — ia.js
+ * JARVIS ERP — ia.js / chat.js
  * Gemini RAG + Chat CRM admin↔cliente + Chat equipe↔admin
- * Integração com conhecimento_ia para contexto técnico
  */
 
 'use strict';
 
+// ============================================================
+// GEMINI IA
+// ============================================================
 let _iaHistorico = [];
 
-// ============================================================
-// GEMINI IA COM RAG
-// ============================================================
 window.iaPerguntar = async function() {
   const inp = _$('iaInput');
   const msg = inp ? inp.value.trim() : '';
@@ -27,25 +26,19 @@ window.iaPerguntar = async function() {
     return;
   }
 
-  // RAG — contexto da oficina + conhecimento técnico
+  // RAG — contexto da oficina
   const ctx = _buildContext();
-  const conhecimento = _buildConhecimento();
-  
   const systemPrompt = `Você é o assistente de IA da oficina "${J.tnome}", especializado em gestão automotiva.
 
 DADOS DA OFICINA AGORA:
 ${ctx}
-
-BASE DE CONHECIMENTO TÉCNICO:
-${conhecimento}
 
 REGRAS:
 - Responda sempre em português brasileiro
 - Seja direto, técnico e útil
 - Nunca invente dados — baseie-se apenas nos dados fornecidos
 - Ao mencionar valores, use o formato R$ X.XXX,XX
-- Para placas de veículos, destaque em negrito
-- Consulte a base de conhecimento para respostas técnicas`;
+- Para placas de veículos, destaque em negrito`;
 
   _iaHistorico.push({ role: 'user', text: msg });
 
@@ -98,9 +91,22 @@ REGRAS:
   }
 };
 
-// ============================================================
-// CONSTRUIR CONTEXTO (dados da oficina)
-// ============================================================
+window.iaAnalisarDRE = async function() {
+  _sv('iaInput', 'Analise o financeiro atual da oficina. Quais são as principais fontes de receita, as maiores despesas, e qual a saúde geral do caixa? Dê sugestões práticas de melhoria.');
+  if (_$('iaInput')) _$('iaInput').dispatchEvent(new Event('input'));
+  await iaPerguntar();
+};
+
+window.iaAnalisarEstoque = async function() {
+  _sv('iaInput', 'Analise o estoque atual. Quais itens estão críticos (abaixo do mínimo)? Quais têm maior giro? Recomende o que comprar com prioridade.');
+  await iaPerguntar();
+};
+
+window.iaDiagnosticarPlaca = async function(placa) {
+  _sv('iaInput', `Mostre o histórico completo de serviços da placa ${placa}. Há algum serviço vencido ou que deva ser feito em breve?`);
+  await iaPerguntar();
+};
+
 function _buildContext() {
   const agora = new Date();
   const mes   = agora.getMonth(), ano = agora.getFullYear();
@@ -135,41 +141,6 @@ ${osDetalhes || 'Nenhuma O.S. registrada'}
   `.trim();
 }
 
-// ============================================================
-// CONSTRUIR CONHECIMENTO (base técnica)
-// ============================================================
-function _buildConhecimento() {
-  if (!J.conhecimentoIA || J.conhecimentoIA.length === 0) {
-    return 'Nenhuma base de conhecimento técnico cadastrada. Utilize dados gerais de mecânica automotiva.';
-  }
-
-  return J.conhecimentoIA.slice(0, 10).map(doc => {
-    return `[${doc.tipo.toUpperCase()}] ${doc.titulo}\nTags: ${doc.tags.join(', ')}\n${doc.conteudo.slice(0, 200)}...`;
-  }).join('\n\n');
-}
-
-// ============================================================
-// PROMPTS PRÉ-CONFIGURADOS
-// ============================================================
-window.iaAnalisarDRE = async function() {
-  _sv('iaInput', 'Analise o financeiro atual da oficina. Quais são as principais fontes de receita, as maiores despesas, e qual a saúde geral do caixa? Dê sugestões práticas de melhoria.');
-  if (_$('iaInput')) _$('iaInput').dispatchEvent(new Event('input'));
-  await iaPerguntar();
-};
-
-window.iaAnalisarEstoque = async function() {
-  _sv('iaInput', 'Analise o estoque atual. Quais itens estão críticos (abaixo do mínimo)? Quais têm maior giro? Recomende o que comprar com prioridade.');
-  await iaPerguntar();
-};
-
-window.iaDiagnosticarPlaca = async function(placa) {
-  _sv('iaInput', `Mostre o histórico completo de serviços da placa ${placa}. Há algum serviço vencido ou que deva ser feito em breve?`);
-  await iaPerguntar();
-};
-
-// ============================================================
-// FORMATAÇÃO DE RESPOSTA IA
-// ============================================================
 function _formatarRespIA(text) {
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -177,9 +148,6 @@ function _formatarRespIA(text) {
     .replace(/\n/g, '<br>');
 }
 
-// ============================================================
-// ADICIONAR MENSAGEM IA
-// ============================================================
 function _adicionarMsgIA(role, html, temp = false) {
   const container = _$('iaMsgs');
   if (!container) return;
@@ -245,6 +213,7 @@ window.abrirChatCRM = function(cid, nome) {
   if (foot) foot.style.display = 'flex';
   renderChatMsgs(cid);
 
+  // Marcar como lidas
   J.mensagens
     .filter(m => m.clienteId === cid && m.sender === 'cliente' && !m.lidaAdmin)
     .forEach(m => J.db.collection('mensagens').doc(m.id).update({ lidaAdmin: true }));
@@ -283,13 +252,14 @@ window.enviarChatCRM = async function() {
   _sv('chatInputCRM', '');
 };
 
+// Enter no chat CRM
 document.addEventListener('DOMContentLoaded', () => {
   const el = _$('chatInputCRM');
   if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarChatCRM(); } });
 });
 
 // ============================================================
-// CHAT EQUIPE ↔ ADMIN
+// CHAT EQUIPE ↔ ADMIN (equipe.html)
 // ============================================================
 window.renderChatEquipe = function() {
   const container = _$('chatMsgs');
@@ -305,6 +275,7 @@ window.renderChatEquipe = function() {
     const dir  = m.sender === 'equipe' ? 'outgoing' : 'incoming';
     const nome = m.sender === 'equipe' ? J.nome : 'Admin';
 
+    // Marcar como lida
     if (m.sender === 'admin' && !m.lidaEquipe && m.para === J.fid) {
       J.db.collection('chat_equipe').doc(m.id).update({ lidaEquipe: true }).catch(() => {});
     }
@@ -339,75 +310,3 @@ document.addEventListener('DOMContentLoaded', () => {
   const el = _$('chatInputEquipe');
   if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMsgEquipe(); } });
 });
-
-// ============================================================
-// RENDERIZAR CONHECIMENTO IA (admin)
-// ============================================================
-window.renderConhecimentoIA = function() {
-  const container = _$('conhecimentoIAContainer');
-  if (!container) return;
-
-  const html = J.conhecimentoIA.map(doc => `
-    <div class="conhecimento-card">
-      <div class="conhecimento-header">
-        <span class="conhecimento-tipo">${doc.tipo.toUpperCase()}</span>
-        <span class="conhecimento-tags">${doc.tags.join(', ')}</span>
-      </div>
-      <div class="conhecimento-titulo">${doc.titulo}</div>
-      <div class="conhecimento-conteudo">${doc.conteudo.slice(0, 150)}...</div>
-      <div class="conhecimento-actions">
-        <button class="btn btn-ghost btn-sm" onclick="editarConhecimento('${doc.id}')">✏</button>
-        <button class="btn btn-danger btn-sm" onclick="deletarConhecimento('${doc.id}')">🗑</button>
-      </div>
-    </div>
-  `).join('') || '<div class="empty-state">Nenhum documento cadastrado</div>';
-
-  _sh('conhecimentoIAContainer', html);
-};
-
-window.salvarConhecimentoIA = async function() {
-  const tipo = _v('conhecimentoTipo');
-  const titulo = _v('conhecimentoTitulo');
-  const conteudo = _v('conhecimentoConteudo');
-  const tags = _v('conhecimentoTags').split(',').map(t => t.trim()).filter(t => t);
-
-  if (!tipo || !titulo || !conteudo || !tags.length) {
-    toastWarn('Preencha todos os campos');
-    return;
-  }
-
-  try {
-    const id = _v('conhecimentoId');
-    const data = {
-      tenantId: J.tid,
-      tipo,
-      titulo,
-      conteudo,
-      tags,
-      updatedAt: new Date().toISOString()
-    };
-
-    if (id) {
-      await J.db.collection('conhecimento_ia').doc(id).update(data);
-      toastOk('Documento atualizado!');
-    } else {
-      data.createdAt = new Date().toISOString();
-      await J.db.collection('conhecimento_ia').add(data);
-      toastOk('Documento criado!');
-    }
-
-    closeModal('modalConhecimento');
-  } catch (e) {
-    toastErr('Erro: ' + e.message);
-  }
-};
-
-window.deletarConhecimento = async function(id) {
-  if (!confirm('Deletar este documento?')) return;
-  try {
-    await J.db.collection('conhecimento_ia').doc(id).delete();
-    toastOk('Documento deletado!');
-  } catch (e) {
-    toastErr('Erro: ' + e.message);
-  }
-};
