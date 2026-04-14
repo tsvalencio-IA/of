@@ -1,258 +1,212 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SaaS Office - Login</title>
-    <style>
-        :root { --primary: #2563eb; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; color: var(--text); }
-        .login-container { background: var(--card); padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { text-align: center; margin-top: 0; color: var(--primary); }
-        .tabs { display: flex; margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb; }
-        .tab { flex: 1; text-align: center; padding: 0.75rem; cursor: pointer; font-weight: 600; color: #6b7280; transition: all 0.2s; }
-        .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: -2px; }
-        .form-group { margin-bottom: 1.25rem; }
-        label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
-        input { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 1rem; transition: border-color 0.2s; }
-        input:focus { outline: none; border-color: var(--primary); ring: 2px solid var(--primary); }
-        button { width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #1d4ed8; }
-        button:disabled { background: #9ca3af; cursor: not-allowed; }
-        .error-msg { color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; text-align: center; display: none; }
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .hidden { display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acesso ao Sistema</title>
+<link rel="stylesheet" href="css/design.css">
+<style>
+/* LOGIN PAGE — grid animado sutil */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+  animation: gridDrift 30s linear infinite;
+}
+@keyframes gridDrift { to { background-position: 48px 48px; } }
+
+/* Input password toggle */
+.pwd-wrap { position: relative; }
+.pwd-wrap .input { padding-right: 42px; }
+.pwd-toggle {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 15px; padding: 4px;
+}
+.pwd-toggle:hover { color: var(--text-primary); }
+
+/* Animação stagger nos campos */
+.login-card .form-group:nth-child(1) { animation: slideUp 0.4s 0.1s both; }
+.login-card .form-group:nth-child(2) { animation: slideUp 0.4s 0.2s both; }
+.login-card .btn                    { animation: slideUp 0.4s 0.3s both; }
+@keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+</style>
 </head>
 <body>
+<div id="toast-container"></div>
 
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <p style="margin-top: 1rem; font-weight: 500;">Conectando ao Sistema...</p>
+<div class="login-page" style="position:relative;z-index:1">
+  <div class="login-card" style="animation: modal-in 0.3s ease">
+    <div class="login-logo-wrap">
+      <div class="login-logo-mark brand-logo-mark">J</div>
+      <div class="login-title brand-name">JARVIS ERP</div>
+      <div class="login-sub brand-tagline">Gestão Automotiva Inteligente</div>
     </div>
 
-    <div class="login-container">
-        <h2>Acesso ao Sistema</h2>
-        
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('master')" id="tab-master">Master</div>
-            <div class="tab" onclick="switchTab('equipe')" id="tab-equipe">Equipe</div>
-            <div class="tab" onclick="switchTab('pin')" id="tab-pin">PIN Rápido</div>
-        </div>
+    <div id="loginErr" class="login-err">Usuário ou senha incorretos.</div>
 
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <input type="hidden" id="login-type" value="master">
-            
-            <div class="form-group">
-                <label for="login-user" id="label-user">Usuário ou E-mail</label>
-                <input type="text" id="login-user" required placeholder="Digite seu usuário ou e-mail">
-            </div>
-            
-            <div class="form-group" id="group-pass">
-                <label for="login-pass" id="label-pass">Senha</label>
-                <input type="password" id="login-pass" placeholder="Digite sua senha">
-            </div>
-
-            <div class="form-group hidden" id="group-pin">
-                <label for="login-pin">Código PIN</label>
-                <input type="password" id="login-pin" maxlength="6" placeholder="****" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;">
-            </div>
-
-            <div id="error-display" class="error-msg"></div>
-
-            <button type="submit" id="btn-login">Entrar</button>
-        </form>
+    <div class="form-group">
+      <label class="form-label">Usuário de acesso</label>
+      <input class="input input-mono" id="usr" type="text" placeholder="seu.usuario" autocomplete="off" spellcheck="false">
     </div>
 
-    <!-- FIREBASE SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <div class="pwd-wrap">
+        <input class="input" id="pwd" type="password" placeholder="••••••••">
+        <button class="pwd-toggle" type="button" onclick="_togglePwd()" id="pwdToggle" title="Ver senha">👁</button>
+      </div>
+    </div>
 
-    <!-- CONFIGURAÇÃO -->
-    <script src="js/config.js"></script>
+    <button class="btn btn-brand btn-xl btn-full" id="btnLogin" onclick="autenticar()" style="margin-top:8px">
+      Entrar no Sistema
+    </button>
 
-    <!-- LÓGICA DE LOGIN -->
-    <script>
-        // Inicializa Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.firestore();
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="status-dot online"></div>
+      <span style="font-family:var(--ff-mono);font-size:0.62rem;color:var(--text-muted)">SISTEMA OPERACIONAL</span>
+    </div>
+  </div>
 
-        // Controle de Abas
-        function switchTab(type) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(`tab-${type}`).classList.add('active');
-            
-            const typeInput = document.getElementById('login-type');
-            const groupPass = document.getElementById('group-pass');
-            const groupPin = document.getElementById('group-pin');
-            const labelUser = document.getElementById('label-user');
-            const inputUser = document.getElementById('login-user');
-            const inputPass = document.getElementById('login-pass');
-            const inputPin = document.getElementById('login-pin');
+  <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-disabled)">
+    <span class="brand-footer">Powered by thIAguinho Soluções · 2026</span>
+  </div>
+</div>
 
-            typeInput.value = type;
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/config.js"></script>
+<script>
+// Limpa sessão ao carregar o login
+sessionStorage.clear();
 
-            if (type === 'pin') {
-                groupPass.classList.add('hidden');
-                groupPin.classList.remove('hidden');
-                inputUser.required = true;
-                inputPass.required = false;
-                labelUser.innerText = "Usuário";
-                inputUser.placeholder = "Seu usuário";
-                inputPin.required = true;
-            } else {
-                groupPass.classList.remove('hidden');
-                groupPin.classList.add('hidden');
-                inputUser.required = true;
-                inputPass.required = true;
-                labelUser.innerText = type === 'master' ? "Usuário ou E-mail" : "Usuário";
-                inputUser.placeholder = type === 'master' ? "admin@oficina.com ou admin" : "usuario";
-                inputPin.required = false;
-            }
-            
-            document.getElementById('error-display').style.display = 'none';
-            inputUser.focus();
-        }
+const db = window.initFirebase();
 
-        function mostrarLoading(show) {
-            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
-            document.getElementById('btn-login').disabled = show;
-        }
+function _togglePwd() {
+  const p = document.getElementById('pwd');
+  const btn = document.getElementById('pwdToggle');
+  if (p.type === 'password') { p.type = 'text'; btn.textContent = '🙈'; }
+  else { p.type = 'password'; btn.textContent = '👁'; }
+}
 
-        async function handleLogin(e) {
-            e.preventDefault();
-            await autenticar();
-        }
+document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') autenticar(); });
+document.getElementById('usr').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pwd').focus(); });
 
-        // FUNÇÃO PRINCIPAL DE AUTENTICAÇÃO (CORRIGIDA)
-        async function autenticar() {
-            const userVal = document.getElementById('login-user').value.trim();
-            const passVal = document.getElementById('login-pass').value.trim();
-            const pinVal = document.getElementById('login-pin').value.trim();
-            const tipo = document.getElementById('login-type').value;
+async function autenticar() {
+  const usr = document.getElementById('usr').value.trim();
+  const pwd = document.getElementById('pwd').value.trim();
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
 
-            if (!userVal || (!passVal && tipo !== 'pin')) {
-                showError("Preencha todos os campos obrigatórios.");
-                return;
-            }
-            if (tipo === 'pin' && !pinVal) {
-                showError("Digite o código PIN.");
-                return;
-            }
+  if (!usr || !pwd) {
+    err.textContent = 'Preencha usuário e senha.';
+    err.style.display = 'block';
+    return;
+  }
 
-            mostrarLoading(true);
-            showError(""); // Limpa erros
+  const btn = document.getElementById('btnLogin');
+  btn.innerHTML = '<div class="spinner"></div> Autenticando...';
+  btn.disabled = true;
 
-            try {
-                let docSnap;
-                let dados = null;
-                let colecao = '';
+  try {
+    // CAMADA 1: Admin da oficina
+    const snapOf = await db.collection('oficinas').where('usuario', '==', usr).get();
+    if (!snapOf.empty) {
+      const doc = snapOf.docs[0];
+      const d   = doc.data();
+      if (d.senha !== pwd)        throw new Error('Senha incorreta.');
+      if (d.status === 'Bloqueado') throw new Error('Licença bloqueada. Contate o suporte.');
 
-                // --- LÓGICA MASTER ---
-                if (tipo === 'master') {
-                    // Tenta buscar por 'usuario'
-                    const q1 = db.collection('oficinas').where('usuario', '==', userVal);
-                    docSnap = await q1.get();
+      sessionStorage.setItem('j_tid',          doc.id);
+      sessionStorage.setItem('j_tnome',        d.nomeFantasia || 'Oficina');
+      sessionStorage.setItem('j_role',         'admin');
+      sessionStorage.setItem('j_nome',         d.nomeFantasia || 'Gestor');
+      sessionStorage.setItem('j_gemini',       d.apiKeys?.gemini      || '');
+      sessionStorage.setItem('j_nicho',        d.nicho                || 'carros');
+      sessionStorage.setItem('j_cloud_name',   d.apiKeys?.cloudName   || 'dmuvm1o6m');
+      sessionStorage.setItem('j_cloud_preset', d.apiKeys?.cloudPreset || 'evolution');
 
-                    // Se não achar, tenta por 'email' (CORREÇÃO CRÍTICA)
-                    if (docSnap.empty && userVal.includes('@')) {
-                        const q2 = db.collection('oficinas').where('email', '==', userVal);
-                        docSnap = await q2.get();
-                    }
+      // Salvar brand do tenant
+      const brand = {
+        name:       d.brandName    || d.nomeFantasia,
+        tagline:    d.brandTagline || 'Gestão Automotiva',
+        logoLetter: d.brandLetter  || (d.nomeFantasia || 'J').charAt(0).toUpperCase(),
+        color:      d.brandColor   || '#3B82F6',
+        footer:     d.brandFooter  || `${d.nomeFantasia} · Powered by JARVIS ERP`
+      };
+      brand.colorDim  = _hexDim(brand.color, 0.12);
+      brand.colorGlow = _hexDim(brand.color, 0.25);
+      sessionStorage.setItem('j_brand', JSON.stringify(brand));
 
-                    if (!docSnap.empty) {
-                        const doc = docSnap.docs[0];
-                        dados = doc.data();
-                        dados.id = doc.id;
-                        colecao = 'oficinas';
+      window.location.href = 'jarvis.html';
+      return;
+    }
 
-                        if (dados.senha !== passVal) {
-                            mostrarLoading(false);
-                            showError("Senha incorreta.");
-                            return;
-                        }
-                        if (dados.status && (dados.status.toLowerCase() === 'bloqueado' || dados.status.toLowerCase() === 'inativo')) {
-                            mostrarLoading(false);
-                            showError("Conta bloqueada. Contate o suporte.");
-                            return;
-                        }
-                    }
-                } 
-                // --- LÓGICA EQUIPE ---
-                else if (tipo === 'equipe') {
-                    const q1 = db.collection('funcionarios').where('usuario', '==', userVal);
-                    docSnap = await q1.get();
-                    
-                    if (docSnap.empty && userVal.includes('@')) {
-                        const q2 = db.collection('funcionarios').where('email', '==', userVal);
-                        docSnap = await q2.get();
-                    }
+    // CAMADA 2: Funcionário / equipe
+    const snapFn = await db.collection('funcionarios').where('usuario', '==', usr).get();
+    if (!snapFn.empty) {
+      const docF = snapFn.docs[0];
+      const dF   = docF.data();
+      if (dF.senha !== pwd) throw new Error('Senha incorreta.');
 
-                    if (!docSnap.empty) {
-                        const doc = docSnap.docs[0];
-                        dados = doc.data();
-                        dados.id = doc.id;
-                        colecao = 'funcionarios';
+      const mae = await db.collection('oficinas').doc(dF.tenantId).get();
+      if (!mae.exists || mae.data().status === 'Bloqueado') throw new Error('Oficina bloqueada.');
 
-                        if (dados.senha !== passVal) {
-                            mostrarLoading(false);
-                            showError("Senha incorreta.");
-                            return;
-                        }
-                    }
-                }
-                // --- LÓGICA PIN ---
-                else if (tipo === 'pin') {
-                    const q1 = db.collection('funcionarios').where('usuario', '==', userVal);
-                    docSnap = await q1.get();
+      const maeData = mae.data();
+      sessionStorage.setItem('j_tid',          dF.tenantId);
+      sessionStorage.setItem('j_tnome',        maeData.nomeFantasia || 'Oficina');
+      sessionStorage.setItem('j_role',         dF.cargo === 'gerente' ? 'gerente' : 'equipe');
+      sessionStorage.setItem('j_nome',         dF.nome);
+      sessionStorage.setItem('j_fid',          docF.id);
+      sessionStorage.setItem('j_comissao',     dF.comissao || 0);
+      sessionStorage.setItem('j_gemini',       maeData.apiKeys?.gemini      || '');
+      sessionStorage.setItem('j_nicho',        maeData.nicho                || 'carros');
+      sessionStorage.setItem('j_cloud_name',   maeData.apiKeys?.cloudName   || 'dmuvm1o6m');
+      sessionStorage.setItem('j_cloud_preset', maeData.apiKeys?.cloudPreset || 'evolution');
 
-                    if (!docSnap.empty) {
-                        const doc = docSnap.docs[0];
-                        dados = doc.data();
-                        dados.id = doc.id;
-                        colecao = 'funcionarios';
+      const brand = {
+        name:       maeData.brandName    || maeData.nomeFantasia,
+        logoLetter: maeData.brandLetter  || (maeData.nomeFantasia || 'J').charAt(0).toUpperCase(),
+        color:      maeData.brandColor   || '#3B82F6',
+        footer:     maeData.brandFooter  || `${maeData.nomeFantasia} · Powered by JARVIS ERP`
+      };
+      brand.colorDim = _hexDim(brand.color, 0.12);
+      sessionStorage.setItem('j_brand', JSON.stringify(brand));
 
-                        if (dados.pin !== pinVal) {
-                            mostrarLoading(false);
-                            showError("PIN incorreto.");
-                            return;
-                        }
-                    }
-                }
+      window.location.href = 'equipe.html';
+      return;
+    }
 
-                // --- SUCESSO ---
-                if (dados) {
-                    sessionStorage.setItem('J.tid', dados.id);
-                    sessionStorage.setItem('J.user', JSON.stringify(dados));
-                    sessionStorage.setItem('J.tipo', tipo);
-                    sessionStorage.setItem('J.colecao', colecao);
-                    
-                    // Pequeno delay para UX
-                    setTimeout(() => {
-                        window.location.href = "jarvis.html";
-                    }, 500);
-                } else {
-                    mostrarLoading(false);
-                    showError("Usuário não encontrado.");
-                }
+    throw new Error('Usuário não encontrado no sistema.');
 
-            } catch (err) {
-                console.error("Erro login:", err);
-                mostrarLoading(false);
-                showError("Erro de conexão: " + err.message);
-            }
-        }
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+    btn.innerHTML = 'Entrar no Sistema';
+    btn.disabled = false;
+  }
+}
 
-        function showError(msg) {
-            const el = document.getElementById('error-display');
-            el.innerText = msg;
-            el.style.display = msg ? 'block' : 'none';
-        }
-    </script>
+function _hexDim(hex, alpha) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0,2),16);
+  const g = parseInt(c.substring(2,4),16);
+  const b = parseInt(c.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Aplicar brand se já salvou (reload)
+window.addEventListener('load', () => {
+  try {
+    const brand = JSON.parse(sessionStorage.getItem('j_brand') || 'null');
+    if (brand) window.aplicarBrand(brand);
+  } catch(e) {}
+});
+</script>
 </body>
 </html>
