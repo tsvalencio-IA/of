@@ -1,162 +1,265 @@
 /**
- * JARVIS ERP - MÓDULO DE INTERFACE (UI)
- * Responsável por: Navegação SPA, Controle de Modais, Filtros e Notificações Visuais.
+ * JARVIS ERP — ui.js
+ * Sistema de UI: toast, modal, tabs, loaders, navegação
  */
 
-window.ui = {
-    /**
-     * Inicializa os componentes visuais
-     */
-    init: function() {
-        console.log("[UI] Inicializando componentes de interface...");
-        this.renderizarInfoOficina();
-        
-        // Garante que o sistema inicia na seção de Pátio
-        const btnInicio = document.querySelector('button[onclick*="sec-os"]');
-        if (btnInicio) {
-            this.irSecao('sec-os', btnInicio);
-        }
-    },
+'use strict';
 
-    /**
-     * Atualiza os nomes e fotos da oficina na interface
-     */
-    renderizarInfoOficina: function() {
-        if (window.J && window.J.oficina) {
-            const lblEmpresa = document.getElementById('lbl-empresa-nome');
-            const lblUser = document.getElementById('lbl-usuario-nome');
-            
-            if (lblEmpresa) lblEmpresa.textContent = window.J.oficina.nomeFantasia || "Oficina Jarvis";
-            if (lblUser) lblUser.textContent = window.J.user ? window.J.user.nome : "Usuário";
-        }
-    },
+// ============================================================
+// TOAST SYSTEM
+// ============================================================
+window.toast = function(msg, type = 'success', title = null) {
+  const icons = { success: '✓', error: '✕', warn: '⚠', info: 'ℹ' };
+  const container = document.getElementById('toast-container') || (() => {
+    const c = document.createElement('div');
+    c.id = 'toast-container';
+    document.body.appendChild(c);
+    return c;
+  })();
 
-    /**
-     * Navegação entre as seções do sistema (SPA)
-     * @param {string} secaoId - ID da section a ser exibida
-     * @param {HTMLElement} btn - Botão clicado para aplicar classe active
-     */
-    irSecao: function(secaoId, btn) {
-        // 1. Remove classe ativa de todos os botões do menu
-        const botoes = document.querySelectorAll('.nav-btn');
-        botoes.forEach(b => b.classList.remove('active'));
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `
+    <div class="toast-icon">${icons[type] || '✓'}</div>
+    <div class="toast-content">
+      ${title ? `<div class="toast-title">${title}</div>` : ''}
+      <div class="toast-msg">${msg}</div>
+    </div>
+  `;
+  container.appendChild(el);
 
-        // 2. Adiciona classe ativa no botão atual
-        if (btn) btn.classList.add('active');
+  // Auto-remove
+  const remove = () => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(20px)';
+    el.style.transition = 'all 0.3s ease';
+    setTimeout(() => el.remove(), 320);
+  };
 
-        // 3. Esconde todas as seções
-        const secoes = document.querySelectorAll('.secao-tela');
-        secoes.forEach(s => {
-            s.classList.add('d-none');
-            s.classList.remove('d-flex');
-        });
-
-        // 4. Mostra a seção alvo
-        const alvo = document.getElementById(secaoId);
-        if (alvo) {
-            alvo.classList.remove('d-none');
-            // Se for o pátio, usamos flex para manter o layout das colunas
-            if (secaoId === 'sec-os') {
-                alvo.classList.add('d-flex');
-            }
-            
-            // Atualiza o título da Topbar
-            const titulo = document.getElementById('titulo-pagina');
-            if (titulo && btn) {
-                titulo.textContent = btn.innerText.trim();
-            }
-        }
-
-        // 5. Fecha a sidebar no mobile após clique
-        if (window.innerWidth < 992) {
-            this.toggleSidebar();
-        }
-    },
-
-    /**
-     * Alterna a visibilidade da Sidebar no Mobile
-     */
-    toggleSidebar: function() {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) {
-            sidebar.classList.toggle('show');
-        }
-    },
-
-    /**
-     * Filtro Global de Busca (Filtra cartões no Kanban e linhas na tabela de clientes)
-     */
-    filtrarGlobal: function() {
-        const termo = document.getElementById('busca-global').value.toLowerCase().trim();
-        
-        // Filtrar Cartões de OS
-        const cartoes = document.querySelectorAll('.os-card');
-        cartoes.forEach(c => {
-            const texto = c.innerText.toLowerCase();
-            c.style.display = texto.includes(termo) ? 'block' : 'none';
-        });
-
-        // Filtrar Tabela de Clientes
-        const linhasClientes = document.querySelectorAll('#tb-clientes-corpo tr');
-        linhasClientes.forEach(l => {
-            const texto = l.innerText.toLowerCase();
-            l.style.display = texto.includes(termo) ? '' : 'none';
-        });
-    },
-
-    /**
-     * Sistema de Notificações Flutuantes (Toasts)
-     * @param {string} titulo - Título da mensagem
-     * @param {string} msg - Texto da mensagem
-     * @param {string} tipo - 'success', 'danger', 'warning', 'info'
-     */
-    mostrarToast: function(titulo, msg, tipo = 'info') {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-
-        const toastId = 'toast_' + Date.now();
-        const corFundo = tipo === 'success' ? 'bg-success' : (tipo === 'danger' ? 'bg-danger' : (tipo === 'warning' ? 'bg-warning text-dark' : 'bg-info text-dark'));
-        
-        const html = `
-            <div id="${toastId}" class="toast show align-items-center text-white ${corFundo} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <strong class="d-block">${titulo}</strong>
-                        ${msg}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close" onclick="this.parentElement.parentElement.remove()"></button>
-                </div>
-            </div>
-        `;
-
-        container.insertAdjacentHTML('beforeend', html);
-
-        // Remove automaticamente após 4 segundos
-        setTimeout(() => {
-            const el = document.getElementById(toastId);
-            if (el) el.remove();
-        }, 4000);
-    },
-
-    /**
-     * Controla a exibição do Painel de Atenção no topo do Pátio
-     * @param {Array} alertas - Lista de strings com os alertas
-     */
-    atualizarPainelAtencao: function(alertas) {
-        const painel = document.getElementById('painel-atencao');
-        if (!painel) return;
-
-        if (alertas && alertas.length > 0) {
-            painel.classList.remove('d-none');
-            let html = '';
-            alertas.forEach(a => {
-                html += `<div class="attention-box bg-black border border-warning p-2 mb-2 text-warning fw-bold small">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i> ${a}
-                         </div>`;
-            });
-            painel.innerHTML = html;
-        } else {
-            painel.classList.add('d-none');
-        }
-    }
+  setTimeout(remove, type === 'error' ? 5000 : 3200);
+  el.addEventListener('click', remove);
 };
+
+// Atalhos
+window.toastOk   = msg => toast(msg, 'success');
+window.toastErr  = msg => toast(msg, 'error', 'Erro');
+window.toastWarn = msg => toast(msg, 'warn');
+window.toastInfo = msg => toast(msg, 'info');
+
+// ============================================================
+// MODAL SYSTEM
+// ============================================================
+window.openModal = function(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Focus no primeiro input
+  setTimeout(() => {
+    const first = el.querySelector('input:not([type=hidden]), select, textarea');
+    if (first) first.focus();
+  }, 100);
+};
+
+window.closeModal = function(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
+  document.body.style.overflow = '';
+};
+
+window.closeAllModals = function() {
+  document.querySelectorAll('.overlay.open').forEach(el => {
+    el.classList.remove('open');
+  });
+  document.body.style.overflow = '';
+};
+
+// Fechar clicando no overlay
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('overlay')) {
+    e.target.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+});
+
+// Fechar com ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAllModals();
+});
+
+// ============================================================
+// TABS SYSTEM
+// ============================================================
+window.switchTab = function(tabEl, paneId, ...otherPaneIds) {
+  // Desativa todos os tabs do mesmo pai
+  tabEl.parentElement.querySelectorAll('.mtab').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active');
+
+  // Ativa o pane correto
+  const pane = document.getElementById(paneId);
+  if (pane) pane.classList.add('active');
+
+  otherPaneIds.forEach(id => {
+    const p = document.getElementById(id);
+    if (p) p.classList.remove('active');
+  });
+};
+
+// ============================================================
+// PAGE NAVIGATION (sidebar)
+// ============================================================
+const _sectionCache = {};
+
+window.irSecao = function(key, navEl) {
+  const sectionMap = window.SECTION_MAP || {};
+  const titleMap   = window.TITLE_MAP   || {};
+
+  // Esconde todas as seções
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+
+  // Desativa nav items
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  // Ativa seção
+  const secId = sectionMap[key];
+  if (secId) {
+    const sec = document.getElementById(secId);
+    if (sec) sec.classList.add('active');
+  }
+
+  // Ativa nav item
+  if (navEl) navEl.classList.add('active');
+
+  // Atualiza título
+  const titleEl = document.getElementById('pageTitle');
+  if (titleEl) titleEl.textContent = titleMap[key] || key.toUpperCase();
+
+  // Hook para seção ativada
+  if (window.onSectionChange) onSectionChange(key);
+};
+
+// ============================================================
+// LOADER STATES
+// ============================================================
+window.setLoading = function(btnId, loading, originalText) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  if (loading) {
+    btn._origText = btn.innerHTML;
+    btn.innerHTML = `<div class="spinner"></div> ${originalText || 'Aguarde...'}`;
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+  } else {
+    btn.innerHTML = btn._origText || originalText || 'Salvar';
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+  }
+};
+
+window.showPageLoader = function(show) {
+  const loader = document.getElementById('page-loader');
+  if (!loader) return;
+  if (show) {
+    loader.classList.remove('hidden', 'fade-out');
+  } else {
+    loader.classList.add('fade-out');
+    setTimeout(() => loader.classList.add('hidden'), 450);
+  }
+};
+
+// ============================================================
+// EMPTY STATE HELPER
+// ============================================================
+window.emptyState = function(icon, title, sub) {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-icon">${icon}</div>
+      <div class="empty-state-title">${title}</div>
+      ${sub ? `<div class="empty-state-sub">${sub}</div>` : ''}
+    </div>
+  `;
+};
+
+window.tableEmpty = function(cols, icon, msg) {
+  return `<tr><td colspan="${cols}" class="table-empty">${icon} ${msg}</td></tr>`;
+};
+
+// ============================================================
+// CONFIRM DIALOG (melhorado vs. window.confirm nativo)
+// ============================================================
+window.confirmar = function(msg, titulo = 'Confirmação') {
+  return new Promise(resolve => {
+    // Usa confirm nativo por agora (pode-se customizar com modal)
+    resolve(window.confirm(`${titulo}\n\n${msg}`));
+  });
+};
+
+// ============================================================
+// SEARCH BAR HELPER
+// ============================================================
+window.setupSearch = function(inputId, onSearch) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  let debounce;
+  el.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => onSearch(el.value.toLowerCase().trim()), 180);
+  });
+};
+
+// ============================================================
+// BADGE COUNTER
+// ============================================================
+window.setBadge = function(id, count) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = count;
+  el.classList.toggle('show', count > 0);
+};
+
+// ============================================================
+// FORMATTERS (para tabelas)
+// ============================================================
+window.badgeStatus = function(status) {
+  const map = {
+    'Aguardando': 'badge-neutral',
+    'Orcamento':  'badge-warn',
+    'Aprovado':   'badge-brand',
+    'Andamento':  'badge-warn',
+    'Concluido':  'badge-success',
+    'Cancelado':  'badge-danger',
+    'Pago':       'badge-success',
+    'Pendente':   'badge-warn',
+    'Online':     'badge-success',
+    'Trial':      'badge-warn',
+    'Bloqueado':  'badge-danger'
+  };
+  return `<span class="badge ${map[status] || 'badge-neutral'}">${status}</span>`;
+};
+
+window.badgeTipo = function(tipo) {
+  const map = {
+    carro:     ['badge-brand',   '🚗 Carro'],
+    moto:      ['badge-warn',    '🏍️ Moto'],
+    bicicleta: ['badge-success', '🚲 Bicicleta']
+  };
+  const [cls, lbl] = map[tipo] || ['badge-neutral', tipo];
+  return `<span class="badge ${cls}">${lbl}</span>`;
+};
+
+window.badgeEntradaSaida = function(tipo) {
+  return tipo === 'Entrada'
+    ? `<span class="badge badge-success">${tipo}</span>`
+    : `<span class="badge badge-danger">${tipo}</span>`;
+};
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', e => {
+  // Enter em inputs mono não submete formulário acidentalmente
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.classList.contains('input-mono')) {
+    e.preventDefault();
+  }
+});
