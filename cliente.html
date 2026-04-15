@@ -2,11 +2,11 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Portal do Cliente</title>
-<link rel="stylesheet" href="css/design.css">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <style>
-body { overflow-y: auto; background: #060A14; color: #E8F4FF; font-family: 'Exo 2', sans-serif; }
+body { overflow-y: auto; background: #060A14; color: #E8F4FF; font-family: 'Exo 2', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -114,8 +114,8 @@ body { overflow-y: auto; background: #060A14; color: #E8F4FF; font-family: 'Exo 
       <div id="portalLoginErr" style="display:none; background: rgba(255,59,59,0.1); color: var(--danger); padding: 10px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 15px; text-align: center; border: 1px solid rgba(255,59,59,0.2);">Credenciais inválidas.</div>
 
       <div style="margin-bottom:16px;">
-        <label style="display:block;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Usuário (Placa/CPF/Login)</label>
-        <input class="input" id="pLogin" placeholder="seu.login" autocomplete="off">
+        <label style="display:block;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Placa ou Usuário</label>
+        <input class="input" id="pLogin" placeholder="Ex: ABC-1234" autocomplete="off">
       </div>
       <div style="margin-bottom:16px;">
         <label style="display:block;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">PIN de acesso</label>
@@ -194,49 +194,73 @@ document.getElementById('pPin').addEventListener('keydown', e => { if (e.key ===
 document.getElementById('pLogin').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pPin').focus(); });
 
 async function portalLogin() {
-  const login = document.getElementById('pLogin').value.trim();
+  const rawLogin = document.getElementById('pLogin').value.trim().toLowerCase();
   const pin   = document.getElementById('pPin').value.trim();
   const err   = document.getElementById('portalLoginErr');
   err.style.display = 'none';
 
-  if (!login || !pin) { err.textContent = 'Preencha login e PIN.'; err.style.display='block'; return; }
+  if (!rawLogin || !pin) { err.textContent = 'Preencha usuário e PIN.'; err.style.display='block'; return; }
 
   const btn = document.querySelector('#loginView button');
   btn.innerHTML = 'Verificando...';
   btn.disabled = true;
 
   try {
-    let q = db.collection('clientes').where('login', '==', login);
-    if (P.tenantId) q = q.where('tenantId', '==', P.tenantId);
-    let snap = await q.get();
+    let authSuccess = false;
 
-    if (snap.empty) {
-        // Fallback: Busca pela PLACA do veículo
-        let qPlaca = db.collection('ordens_servico').where('placa', '==', login.toUpperCase());
-        if (P.tenantId) qPlaca = qPlaca.where('tenantId', '==', P.tenantId);
-        const snapPlaca = await qPlaca.get();
-        
-        if(!snapPlaca.empty) {
-            const osLogin = snapPlaca.docs[0].data();
-            if(osLogin.pin !== pin) throw new Error('PIN inválido para este veículo.');
+    // 1. Busca direto pelo PIN nas O.S. (mais rápido e à prova de falhas de digitação)
+    let qOS = db.collection('ordens_servico').where('pin', '==', pin);
+    if (P.tenantId) qOS = qOS.where('tenantId', '==', P.tenantId);
+    const snapOS = await qOS.get();
+
+    if (!snapOS.empty) {
+        for (let doc of snapOS.docs) {
+            let osData = doc.data();
+            // Verifica se a placa, cpf, login ou primeiro nome bate com o que foi digitado
+            let p = (osData.placa || '').toLowerCase().replace(/[^a-z0-9]/g, ''); // Placa sem traço
+            let c = (osData.cpf || '').toLowerCase().replace(/\D/g, ''); // CPF só números
+            let n = (osData.cliente || '').split(' ')[0].toLowerCase();
+            let userLimpo = rawLogin.replace(/[^a-z0-9]/g, ''); // Tira traços do que o cliente digitou
             
-            P.tenantId = osLogin.tenantId;
-            P.clienteId = osLogin.clienteId || osLogin.cliente;
-            P.cliente = { nome: osLogin.cliente || 'Cliente' };
-        } else {
-            throw new Error('Usuário ou Placa não encontrado.');
+            if (p === userLimpo || c === userLimpo || n === rawLogin) {
+                P.tenantId = osData.tenantId;
+                P.clienteId = osData.clienteId || 'avulso';
+                P.cliente = { nome: osData.cliente || 'Cliente' };
+                authSuccess = true;
+                break;
+            }
         }
-    } else {
-        const doc = snap.docs[0];
-        const c   = doc.data();
-        if (c.pin !== pin) throw new Error('PIN inválido.');
-
-        P.clienteId = doc.id;
-        P.tenantId  = c.tenantId;
-        P.cliente   = { id: doc.id, ...c };
     }
 
-    if (!P.oficina) {
+    // 2. Se não achou na O.S., tenta na base de Clientes
+    if (!authSuccess) {
+        let qCli = db.collection('clientes').where('pin', '==', pin);
+        if (P.tenantId) qCli = qCli.where('tenantId', '==', P.tenantId);
+        const snapCli = await qCli.get();
+        
+        if (!snapCli.empty) {
+            for (let doc of snapCli.docs) {
+                let cliData = doc.data();
+                let log = (cliData.login || '').toLowerCase();
+                let docCpf = (cliData.doc || '').replace(/\D/g, '');
+                let userNum = rawLogin.replace(/\D/g, '');
+                
+                if (log === rawLogin || (userNum && docCpf === userNum)) {
+                    P.tenantId = cliData.tenantId;
+                    P.clienteId = doc.id;
+                    P.cliente = { id: doc.id, ...cliData };
+                    authSuccess = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!authSuccess) {
+        throw new Error('Usuário ou PIN incorretos. Dica: Digite a placa do veículo.');
+    }
+
+    if (!P.oficina && P.tenantId) {
       const ofSnap = await db.collection('oficinas').doc(P.tenantId).get();
       if (ofSnap.exists) {
         P.oficina = ofSnap.data();
@@ -244,7 +268,7 @@ async function portalLogin() {
       }
     }
 
-    document.getElementById('portalClienteNome').textContent = P.cliente.nome;
+    document.getElementById('portalClienteNome').textContent = P.cliente?.nome || 'Cliente';
     document.getElementById('loginView').style.display  = 'none';
     document.getElementById('portalView').style.display = 'block';
 
@@ -268,16 +292,24 @@ function portalLogout() {
 }
 
 function _iniciarPortal() {
+  const loginUpper = document.getElementById('pLogin').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
   db.collection('ordens_servico')
     .where('tenantId', '==', P.tenantId)
     .onSnapshot(snap => {
       const osList = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .filter(d => d.clienteId === P.clienteId || d.cliente === P.cliente.nome)
+        .filter(d => {
+            const pLimpa = (d.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            return (P.clienteId !== 'avulso' && d.clienteId === P.clienteId) || 
+                   (pLimpa && pLimpa === loginUpper) || 
+                   (d.cliente && d.cliente === P.cliente?.nome) ||
+                   (d.pin && d.pin === document.getElementById('pPin').value.trim()); // Garante que a OS com o PIN correto aparece
+        })
         .sort((a, b) => (b.updatedAt || '') > (a.updatedAt || '') ? 1 : -1);
       _renderPortal(osList);
     });
 
-  if(P.clienteId) {
+  if(P.clienteId && P.clienteId !== 'avulso') {
       db.collection('mensagens')
         .where('tenantId', '==', P.tenantId)
         .where('clienteId', '==', P.clienteId)
@@ -303,6 +335,19 @@ function _renderPortal(osList) {
     entregue:   'Entregue'
   };
 
+  const STATUS_MAP_LEGACY = { 
+    'Aguardando': 'patio', 
+    'Concluido': 'entregue', 
+    'Triagem': 'patio', 
+    'Orcamento': 'orcamento', 
+    'Orcamento_Enviado': 'aprovacao', 
+    'Aprovado': 'box', 
+    'Andamento': 'box', 
+    'Pronto': 'pronto', 
+    'Entregue': 'entregue', 
+    'Cancelado': 'cancelado' 
+  };
+
   if (!osList.length) {
     content.innerHTML = `
       <div style="text-align:center;padding:48px 20px">
@@ -318,8 +363,9 @@ function _renderPortal(osList) {
 
   content.innerHTML = osList.map(os => {
     // Mapeamento de Status
-    let statusLimpo = os.status ? os.status.toLowerCase() : 'patio';
-    if(statusLimpo === 'orcamento_enviado') statusLimpo = 'aprovacao'; // Traduz legado
+    let statusOriginal = os.status || 'patio';
+    let statusLimpo = STATUS_MAP_LEGACY[statusOriginal] || statusOriginal.toLowerCase();
+    
     if(!STEPS.includes(statusLimpo)) statusLimpo = 'patio';
 
     const statusIdx = STEPS.indexOf(statusLimpo);
@@ -362,7 +408,7 @@ function _renderPortal(osList) {
 
     // Detalhamento: Mão de Obra e Peças Separados
     let detalheHtml = '';
-    if (os.servicos?.length > 0 || os.pecas?.length > 0 || os.maoObra > 0) {
+    if (os.servicos?.length > 0 || os.pecas?.length > 0 || os.maoObra > 0 || os.pecasLegacy?.length > 0) {
       detalheHtml += `
         <div style="margin-top:16px">
           <div style="font-family:var(--ff-mono);font-size:0.65rem;color:var(--brand);letter-spacing:2px;margin-bottom:8px;">DETALHAMENTO TÉCNICO</div>
@@ -381,6 +427,12 @@ function _renderPortal(osList) {
           detalheHtml += `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)"><div style="font-size:0.84rem;color:var(--text-primary)">📦 ${p.desc || 'Peça'} (x${p.qtd||p.q||1})</div><div style="font-family:var(--ff-mono);font-size:0.82rem;color:var(--success)">${formatter.format((p.qtd||p.q||1) * (p.venda||p.v||0))}</div></div>`;
         });
       }
+
+      if(os.pecasLegacy) {
+        os.pecasLegacy.forEach(p => {
+          detalheHtml += `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)"><div style="font-size:0.84rem;color:var(--text-primary)">📦 ${p.desc || 'Item'} (x${p.q||1})</div><div style="font-family:var(--ff-mono);font-size:0.82rem;color:var(--success)">${formatter.format((p.q||1) * (p.v||0))}</div></div>`;
+        });
+      }
       
       detalheHtml += `</div>
           ${os.total ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--success-dim);border-radius:0 0 var(--r-lg) var(--r-lg);border:1px solid rgba(0,255,136,0.2);border-top:none"><span style="font-family:var(--ff-mono);font-size:0.7rem;color:var(--text-muted)">TOTAL APROVADO</span><span style="font-family:var(--ff-display);font-size:1.3rem;font-weight:800;color:var(--success)">${formatter.format(os.total)}</span></div>` : ''}
@@ -392,9 +444,9 @@ function _renderPortal(osList) {
       <div style="margin-top:16px">
         <div style="font-family:var(--ff-mono);font-size:0.65rem;color:var(--brand);letter-spacing:2px;margin-bottom:8px;">GALERIA DE FOTOS</div>
         <div class="media-preview-grid">
-          ${(os.media || os.fotos).map(m => m.type !== 'video'
+          ${(os.media || os.fotos).map(m => (m.type !== 'video' && !m.url?.endsWith('.mp4'))
             ? `<div class="media-preview-item"><img src="${m.url || m}" onclick="window.open('${m.url || m}','_blank')" loading="lazy"></div>`
-            : `<div class="media-preview-item" style="cursor:pointer;background:#000" onclick="window.open('${m.url}','_blank')"><div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem">▶️</div></div>`
+            : `<div class="media-preview-item" style="cursor:pointer;background:#000" onclick="window.open('${m.url || m}','_blank')"><div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem">▶️</div></div>`
           ).join('')}
         </div>
       </div>
@@ -527,7 +579,7 @@ async function _aprovarOrcamento(osId) {
     const tl = osData.timeline || [];
     tl.push({ dt: new Date().toISOString(), user: P.cliente?.nome || 'Cliente', acao: `Cliente APROVOU o orçamento via Portal B2C` });
 
-    await db.collection('ordens_servico').doc(osId).update({ status: 'box', timeline: tl, updatedAt: new Date().toISOString() });
+    await db.collection('ordens_servico').doc(osId).update({ status: 'Andamento', timeline: tl, updatedAt: new Date().toISOString() });
     
     await db.collection('lixeira_auditoria').add({
       tenantId: P.tenantId, modulo: 'PORTAL B2C', acao: `Orçamento APROVADO: OS #${osId.slice(-6)}`, usuario: P.cliente?.nome || 'Cliente', ts: new Date().toISOString()
@@ -545,7 +597,7 @@ async function _recusarOrcamento(osId) {
     const tl = osData.timeline || [];
     tl.push({ dt: new Date().toISOString(), user: P.cliente?.nome || 'Cliente', acao: `Cliente RECUSOU o orçamento via Portal B2C` });
 
-    await db.collection('ordens_servico').doc(osId).update({ status: 'cancelado', timeline: tl, updatedAt: new Date().toISOString() });
+    await db.collection('ordens_servico').doc(osId).update({ status: 'Cancelado', timeline: tl, updatedAt: new Date().toISOString() });
     
     await db.collection('lixeira_auditoria').add({
       tenantId: P.tenantId, modulo: 'PORTAL B2C', acao: `Orçamento RECUSADO: OS #${osId.slice(-6)}`, usuario: P.cliente?.nome || 'Cliente', ts: new Date().toISOString()
