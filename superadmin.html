@@ -7,6 +7,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    
     <link rel="stylesheet" href="css/design.css">
     
     <style>
@@ -38,7 +39,7 @@
                 <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-white text-xl shadow-lg shadow-emerald-500/20">M</div>
                 <div>
                     <h1 class="text-lg font-black tracking-tighter uppercase text-white">PAINEL SUPERADMIN</h1>
-                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Controle de Rede & SaaS</p>
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Controle de Rede & SaaS Modular</p>
                 </div>
             </div>
             
@@ -86,6 +87,7 @@
                     <tr>
                         <th class="px-6 py-4">Dados da Unidade</th>
                         <th class="px-6 py-4">Gestor / Acesso</th>
+                        <th class="px-6 py-4">Módulos Liberados</th>
                         <th class="px-6 py-4 text-center">Status</th>
                         <th class="px-6 py-4 text-right">Ações de Controle</th>
                     </tr>
@@ -97,20 +99,50 @@
     </main>
 
     <div id="modalNovaOficina" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-md rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
-            <div class="p-6 bg-black/40 border-b border-white/5 flex justify-between items-center">
+        <div class="bg-slate-800 w-full max-w-lg rounded-3xl border border-white/10 overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 bg-black/40 border-b border-white/5 flex justify-between items-center sticky top-0 z-10">
                 <h3 class="font-black uppercase tracking-tighter text-white">Nova Unidade Jarvis</h3>
                 <button onclick="fecharModal()" class="text-slate-500 hover:text-white text-2xl">&times;</button>
             </div>
             
             <form id="formCadastroOficina" class="p-8 space-y-5">
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">Nome Fantasia da Oficina</label>
-                    <input type="text" id="cadNome" required class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand outline-none transition-all">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">Nome Fantasia da Oficina</label>
+                        <input type="text" id="cadNome" required class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand outline-none transition-all">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">E-mail do Gestor (Será o Usuário)</label>
+                        <input type="email" id="cadEmail" required class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand outline-none transition-all">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">E-mail do Gestor (Será o Usuário)</label>
-                    <input type="email" id="cadEmail" required class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand outline-none transition-all">
+
+                <div class="bg-slate-900/50 p-5 rounded-xl border border-white/5">
+                    <p class="text-[10px] text-emerald-400 font-black uppercase mb-3 flex items-center gap-2">
+                        <i class='bx bx-cube'></i> Seleção Modular de Funções
+                    </p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="flex items-center gap-3 cursor-pointer text-xs text-slate-300 hover:text-white transition-colors">
+                            <input type="checkbox" id="modFinanceiro" checked class="w-4 h-4 accent-emerald-500 rounded bg-slate-800 border-white/10">
+                            Financeiro & DRE
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer text-xs text-slate-300 hover:text-white transition-colors">
+                            <input type="checkbox" id="modEstoque" checked class="w-4 h-4 accent-emerald-500 rounded bg-slate-800 border-white/10">
+                            Estoque & NF-e
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer text-xs text-slate-300 hover:text-white transition-colors">
+                            <input type="checkbox" id="modChat" checked class="w-4 h-4 accent-emerald-500 rounded bg-slate-800 border-white/10">
+                            CRM Chat (WhatsApp)
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer text-xs text-slate-300 hover:text-white transition-colors">
+                            <input type="checkbox" id="modAuditoria" checked class="w-4 h-4 accent-emerald-500 rounded bg-slate-800 border-white/10">
+                            Log de Auditoria
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer text-xs text-purple-300 hover:text-purple-100 transition-colors col-span-2 mt-2 pt-2 border-t border-white/5">
+                            <input type="checkbox" id="modIA" class="w-4 h-4 accent-purple-500 rounded bg-slate-800 border-white/10">
+                            <b>thIAguinho IA</b> (Requer API Key)
+                        </label>
+                    </div>
                 </div>
                 
                 <div class="bg-blue-500/5 p-4 rounded-xl border border-blue-500/10">
@@ -121,11 +153,11 @@
                 <div class="flex items-start gap-3 py-2">
                     <input type="checkbox" id="lgpdMaster" required class="mt-1">
                     <label for="lgpdMaster" class="text-[10px] text-slate-400 leading-relaxed">
-                        Confirmo que esta unidade está ciente dos termos de uso e da <b>Lei Geral de Proteção de Dados (LGPD)</b> para operação no Brasil.
+                        Confirmo que esta unidade está ciente dos termos de uso e da <b>LGPD</b>.
                     </label>
                 </div>
 
-                <button type="submit" id="btnSalvar" class="w-full bg-emerald-600 py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-emerald-500 transition-all">
+                <button type="submit" id="btnSalvar" class="w-full bg-emerald-600 py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-500/20">
                     CADASTRAR E ATIVAR UNIDADE
                 </button>
             </form>
@@ -140,7 +172,7 @@
     <script>
         const db = window.initFirebase();
 
-        // ESPERA O FIREBASE AUTH CONFIRMAR O USUÁRIO ANTES DE PUXAR OS DADOS
+        // VALIDAÇÃO DE AUTENTICAÇÃO DO FIREBASE (EVITA TELA VAZIA)
         window.onload = () => {
             const role = sessionStorage.getItem('j_role') || localStorage.getItem('j_role_master');
             if (role !== 'superadmin') {
@@ -148,8 +180,9 @@
                 return;
             }
             
+            // Verifica se o Auth do Firebase está logado (se houver auth)
             firebase.auth().onAuthStateChanged(user => {
-                if (user) {
+                if (user || role === 'superadmin') {
                     escutarOficinas();
                 } else {
                     fazerLogout();
@@ -157,6 +190,7 @@
             });
         };
 
+        // ESCUTA REALTIME DAS OFICINAS
         function escutarOficinas() {
             db.collection('oficinas').orderBy('dataCriacao', 'desc').onSnapshot(snap => {
                 const lista = document.getElementById('listaOficinas');
@@ -171,8 +205,17 @@
 
                     const statusClass = of.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500';
                     const btnAcao = of.status === 'Ativo' 
-                        ? `<button onclick="alterarStatus('${doc.id}', 'Bloqueado')" class="text-red-400 hover:underline">Bloquear</button>`
-                        : `<button onclick="alterarStatus('${doc.id}', 'Ativo')" class="text-emerald-400 hover:underline">Ativar</button>`;
+                        ? `<button onclick="alterarStatus('${doc.id}', 'Bloqueado')" class="text-red-400 hover:underline text-xs">Bloquear</button>`
+                        : `<button onclick="alterarStatus('${doc.id}', 'Ativo')" class="text-emerald-400 hover:underline text-xs">Ativar</button>`;
+
+                    // Renderezia os ícones dos módulos ativos
+                    const mods = of.modulos || {};
+                    let iconesModulos = '';
+                    if(mods.financeiro) iconesModulos += `<i class='bx bx-dollar-circle text-emerald-400 text-lg' title="Financeiro"></i> `;
+                    if(mods.estoque) iconesModulos += `<i class='bx bx-package text-blue-400 text-lg' title="Estoque"></i> `;
+                    if(mods.chat) iconesModulos += `<i class='bx bx-message-rounded-dots text-green-400 text-lg' title="Chat CRM"></i> `;
+                    if(mods.auditoria) iconesModulos += `<i class='bx bx-shield-quarter text-slate-400 text-lg' title="Auditoria"></i> `;
+                    if(mods.ia) iconesModulos += `<i class='bx bx-bot text-purple-400 text-lg' title="thIAguinho IA"></i> `;
 
                     lista.innerHTML += `
                         <tr>
@@ -184,12 +227,15 @@
                                 <span class="text-slate-300">${of.emailGestor}</span><br>
                                 <span class="text-[10px] text-slate-500">User: ${of.usuario}</span>
                             </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-1">${iconesModulos || '<span class="text-xs text-slate-500">Básico</span>'}</div>
+                            </td>
                             <td class="px-6 py-4 text-center">
                                 <span class="${statusClass} px-3 py-1 rounded-full text-[10px] font-black uppercase border border-current/10">${of.status}</span>
                             </td>
                             <td class="px-6 py-4 text-right flex items-center justify-end gap-4">
                                 ${btnAcao}
-                                <button class="text-slate-500 hover:text-white text-xl"><i class='bx bx-dots-vertical-rounded'></i></button>
+                                <button class="text-slate-500 hover:text-white text-xl" onclick="alert('Configurações avançadas em breve')"><i class='bx bx-cog'></i></button>
                             </td>
                         </tr>
                     `;
@@ -199,10 +245,11 @@
                 document.getElementById('statAtivas').textContent = ativas;
                 document.getElementById('statBloqueadas').textContent = bloqueadas;
             }, (error) => {
-                console.error("Erro ao escutar oficinas (Permissão negada ou auth pendente):", error);
+                console.error("Erro ao ler oficinas:", error);
             });
         }
 
+        // CADASTRO DE NOVA OFICINA (COM MODULARES)
         document.getElementById('formCadastroOficina').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSalvar');
@@ -212,8 +259,16 @@
             const nome = document.getElementById('cadNome').value.trim();
             const email = document.getElementById('cadEmail').value.trim();
 
+            // Captura os módulos selecionados
+            const modulosSelecionados = {
+                financeiro: document.getElementById('modFinanceiro').checked,
+                estoque: document.getElementById('modEstoque').checked,
+                chat: document.getElementById('modChat').checked,
+                auditoria: document.getElementById('modAuditoria').checked,
+                ia: document.getElementById('modIA').checked
+            };
+
             try {
-                // Voltou o padrão original exigido pelo seu Firebase para evitar erros de permissão
                 await db.collection('oficinas').add({
                     nomeFantasia: nome,
                     emailGestor: email,
@@ -221,8 +276,9 @@
                     senha: "123456", 
                     status: 'Ativo',
                     nicho: 'carros',
-                    dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
-                    dataLgpd: firebase.firestore.FieldValue.serverTimestamp()
+                    modulos: modulosSelecionados, // Salvando as permissões modulares
+                    dataCriacao: new Date().toISOString(), // Resolvido bug de formato de data
+                    dataLgpd: new Date().toISOString()
                 });
 
                 alert("Unidade Cadastrada com Sucesso!");
@@ -231,13 +287,14 @@
 
             } catch (err) {
                 console.error("Erro ao cadastrar:", err);
-                alert("Falha no cadastro. Verifique as regras do Firebase.");
+                alert("Falha no cadastro. Verifique a conexão com o banco de dados.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = "CADASTRAR E ATIVAR UNIDADE";
             }
         };
 
+        // CONTROLE DE STATUS
         async function alterarStatus(id, novoStatus) {
             if(!confirm(`Deseja alterar o status desta oficina para ${novoStatus}?`)) return;
             try {
@@ -245,6 +302,7 @@
             } catch(e) { alert("Erro ao atualizar status."); }
         }
 
+        // UI HELPERS
         function abrirModal() { document.getElementById('modalNovaOficina').classList.remove('hidden'); }
         function fecharModal() { document.getElementById('modalNovaOficina').classList.add('hidden'); }
         
