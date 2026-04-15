@@ -151,7 +151,7 @@ window.prepNF = function() {
         const container = $('containerItensNF').parentElement;
         const btnHtml = `
         <div style="display:flex;gap:10px;margin-bottom:14px;background:rgba(255,184,0,0.05);padding:10px;border:1px dashed var(--warn);border-radius:3px;">
-            <input type="file" id="xmlInputFile" accept=".xml" style="display:none" onchange="lerXMLNFe(event)">
+            <input type="file" id="xmlInputFile" accept=".xml" style="display:none" onchange="if(window.lerXMLNFe) window.lerXMLNFe(event); else alert('Função lerXMLNFe não encontrada.')">
             <button type="button" id="btnLoadXmlNfe" class="btn-warn" onclick="document.getElementById('xmlInputFile').click()">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>
                 IMPORTAR NOTA FISCAL (XML)
@@ -162,6 +162,7 @@ window.prepNF = function() {
     }
 };
 
+// NOVO LEITOR DE XML (SUPORTA NAMESPACES DA NFe BRASILEIRA)
 window.lerXMLNFe = function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -170,26 +171,33 @@ window.lerXMLNFe = function(event) {
     reader.onload = function(e) {
         try {
             const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
+            const xmlDoc = parser.parseDocument(e.target.result, "text/xml");
 
-            // Parse Cabeçalho (Nº da Nota e Data de Emissão)
-            const nNF = xmlDoc.querySelector("nNF")?.textContent || '';
-            const dhEmi = xmlDoc.querySelector("dhEmi")?.textContent || '';
+            // Helper para ler tag ignorando Namespace (ex: <nfe:det> ou <det>)
+            const getTag = (node, tag) => {
+                const el = node.getElementsByTagName(tag)[0] || node.getElementsByTagNameNS("*", tag)[0];
+                return el ? el.textContent : '';
+            };
+
+            const nNF = getTag(xmlDoc, "nNF");
+            const dhEmi = getTag(xmlDoc, "dhEmi");
             if (nNF && $('nfNumero')) $('nfNumero').value = nNF;
             if (dhEmi && $('nfData')) $('nfData').value = dhEmi.split('T')[0];
 
-            // Parse Fornecedor
-            const nomeEmit = xmlDoc.querySelector("emit > xNome")?.textContent || '';
+            const nomeEmit = getTag(xmlDoc, "xNome");
 
-            // Parse Itens (Produtos detalhados no XML)
-            const detNodes = xmlDoc.querySelectorAll("det");
+            // Pega os itens da nota
+            const detNodes = xmlDoc.getElementsByTagName("det").length > 0 
+                ? xmlDoc.getElementsByTagName("det") 
+                : xmlDoc.getElementsByTagNameNS("*", "det");
+
             if (detNodes.length > 0 && $('containerItensNF')) {
-                $('containerItensNF').innerHTML = ''; // Limpa os itens manuais existentes
+                $('containerItensNF').innerHTML = ''; // Limpa os manuais
                 
-                detNodes.forEach(det => {
-                    const xProd = det.querySelector("xProd")?.textContent || '';
-                    const qCom = parseFloat(det.querySelector("qCom")?.textContent || 1);
-                    const vUnCom = parseFloat(det.querySelector("vUnCom")?.textContent || 0);
+                Array.from(detNodes).forEach(det => {
+                    const xProd = getTag(det, "xProd");
+                    const qCom = parseFloat(getTag(det, "qCom") || 1);
+                    const vUnCom = parseFloat(getTag(det, "vUnCom") || 0);
 
                     // Busca no estoque se a peça já existe para sugerir valor de venda (Margem Padrão 50% se não achar)
                     const pecaExistente = J.estoque.find(p => p.desc.toLowerCase() === xProd.toLowerCase());
@@ -218,8 +226,7 @@ window.lerXMLNFe = function(event) {
             console.error(err);
         }
         
-        // Reseta o input para permitir importar o mesmo arquivo se houver correção
-        $('xmlInputFile').value = '';
+        if($('xmlInputFile')) $('xmlInputFile').value = '';
     };
     reader.readAsText(file);
 };
@@ -228,96 +235,182 @@ window.adicionarItemNF = function() {
     const div = document.createElement('div');
     div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 90px 90px 32px;gap:8px;align-items:center;margin-bottom:8px;';
     div.innerHTML = `
-        <input class="j-input nf-desc" placeholder="Descrição do item" oninput="sugerirProdutoNF(this)">
+        <input class="j-input nf-desc" placeholder="Descrição do item" oninput="sugerirItemEstoqueNF(this)">
         <input type="number" class="j-input nf-qtd" value="1" min="1" oninput="calcNFTotal()">
         <input type="number" class="j-input nf-custo" value="0" step="0.01" placeholder="Custo" oninput="calcNFTotal()">
         <input type="number" class="j-input nf-venda" value="0" step="0.01" placeholder="Venda" oninput="calcNFTotal()">
         <button type="button" onclick="this.parentElement.remove();calcNFTotal()" style="background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.3);border-radius:2px;color:var(--danger);cursor:pointer;width:32px;height:32px;">✕</button>
     `;
-    $('containerItensNF').appendChild(div);
+    if ($('containerItensNF')) $('containerItensNF').appendChild(div);
+};
+
+window.sugerirItemEstoqueNF = function(input) {
+    const val = input.value.toLowerCase().trim();
+    if (val.length < 3) return;
+    const existente = J.estoque.find(p => p.desc.toLowerCase() === val);
+    if (existente) {
+        const row = input.parentElement;
+        const custoInp = row.querySelector('.nf-custo');
+        const vendaInp = row.querySelector('.nf-venda');
+        if (custoInp && parseFloat(custoInp.value) === 0) custoInp.value = existente.custo || 0;
+        if (vendaInp && parseFloat(vendaInp.value) === 0) vendaInp.value = existente.venda || 0;
+        calcNFTotal();
+    }
 };
 
 window.calcNFTotal = function() {
-    let total = 0;
-    document.querySelectorAll('#containerItensNF > div').forEach(div => {
-        const q = parseFloat(div.querySelector('.nf-qtd').value || 0);
-        const c = parseFloat(div.querySelector('.nf-custo').value || 0);
-        total += (q * c);
+    let t = 0; 
+    document.querySelectorAll('#containerItensNF > div').forEach(r => { 
+        const qtd = parseFloat(r.querySelector('.nf-qtd')?.value || 0);
+        const custo = parseFloat(r.querySelector('.nf-custo')?.value || 0);
+        t += (qtd * custo); 
     });
-    if ($('nfTotal')) $('nfTotal').innerText = total.toFixed(2).replace('.', ',');
+    if ($('nfTotal')) $('nfTotal').innerText = t.toFixed(2).replace('.', ',');
+};
+
+window.checkPgtoNF = function() { 
+    if ($('divParcelasNF') && $('nfPgtoForma')) {
+        $('divParcelasNF').style.display = ['Parcelado', 'Boleto'].includes($v('nfPgtoForma')) ? 'block' : 'none'; 
+    }
 };
 
 window.salvarNF = async function() {
     const itens = [];
-    document.querySelectorAll('#containerItensNF > div').forEach(div => {
-        const desc = div.querySelector('.nf-desc').value.trim();
-        const q = parseFloat(div.querySelector('.nf-qtd').value || 0);
-        const c = parseFloat(div.querySelector('.nf-custo').value || 0);
-        const v = parseFloat(div.querySelector('.nf-venda').value || 0);
-        if (desc && q > 0) itens.push({ desc, q, c, v });
+    document.querySelectorAll('#containerItensNF > div').forEach(r => {
+        const desc = r.querySelector('.nf-desc')?.value;
+        if (desc) itens.push({
+            desc,
+            qtd: parseFloat(r.querySelector('.nf-qtd')?.value || 1),
+            custo: parseFloat(r.querySelector('.nf-custo')?.value || 0),
+            venda: parseFloat(r.querySelector('.nf-venda')?.value || 0)
+        });
     });
-
-    if (itens.length === 0) { toast('⚠ Adicione ao menos um item', 'warn'); return; }
-
-    const batch = db.batch();
-    const dataNota = $v('nfData');
-
-    itens.forEach(it => {
-        // Lógica de SOMA ao estoque existente
-        const pExistente = J.estoque.find(p => p.desc.toLowerCase() === it.desc.toLowerCase());
-        if (pExistente) {
-            batch.update(db.collection('estoque').doc(pExistente.id), {
-                qtd: firebase.firestore.FieldValue.increment(it.q),
-                custo: it.c,
-                venda: it.v,
+    
+    if (!itens.length) { toast('⚠ Adicione ao menos um item', 'warn'); return; }
+    
+    const batch = db.batch(); 
+    let totalNF = 0;
+    
+    // 1. Processar Estoque (Soma as quantidades se existir, cria se não existir)
+    for (const item of itens) {
+        totalNF += item.qtd * item.custo;
+        
+        const existente = J.estoque.find(p => p.desc.toLowerCase() === item.desc.toLowerCase());
+        if (existente) { 
+            batch.update(db.collection('estoqueItems').doc(existente.id), {
+                qtd: (existente.qtd || 0) + item.qtd,
+                custo: item.custo,      // Atualiza o custo do lote mais recente
+                venda: item.venda,      // Atualiza o valor de venda praticado
                 updatedAt: new Date().toISOString()
-            });
-        } else {
-            const ref = db.collection('estoque').doc();
-            batch.set(ref, {
+            }); 
+        } else { 
+            batch.set(db.collection('estoqueItems').doc(), {
                 tenantId: J.tid,
-                desc: it.desc,
-                qtd: it.q,
-                custo: it.c,
-                venda: it.v,
+                desc: item.desc,
+                qtd: item.qtd,
+                custo: item.custo,
+                venda: item.venda,
+                min: 1,
+                und: 'UN',
                 createdAt: new Date().toISOString()
-            });
+            }); 
         }
-    });
-
-    // Financeiro (Gera a despesa de compra)
-    const totalNF = parseFloat($('nfTotal').innerText.replace(',', '.'));
-    const finRef = db.collection('financeiro').doc();
-    batch.set(finRef, {
-        tenantId: J.tid,
-        tipo: 'Saída',
-        desc: `Compra NF: ${$v('nfNumero') || 'S/N'}`,
-        valor: totalNF,
-        pgto: $v('nfPgtoForma'),
-        venc: dataNota,
-        status: 'Pendente',
-        createdAt: new Date().toISOString()
-    });
-
-    await batch.commit();
-    toast('✓ ENTRADA DE NOTA E ESTOQUE PROCESSADOS');
-    fecharModal('modalNF');
-    audit('ESTOQUE', `Entrada de NF ${$v('nfNumero')} - Total: ${moeda(totalNF)}`);
+    }
+    
+    // 2. Processar Contas a Pagar (Financeiro gerado a partir da NF)
+    const formas = ['Dinheiro', 'PIX']; 
+    const st = formas.includes($v('nfPgtoForma')) ? 'Pago' : 'Pendente';
+    const nPar = parseInt($v('nfParcelas') || 1);
+    
+    for (let i = 0; i < nPar; i++) {
+        const d = new Date($v('nfVenc') || new Date()); 
+        d.setMonth(d.getMonth() + i);
+        
+        batch.set(db.collection('financeiro').doc(), {
+            tenantId: J.tid,
+            tipo: 'Saída',
+            status: st,
+            desc: `NF ${$v('nfNumero') || 's/n'} — ${J.fornecedores.find(f => f.id === $v('nfFornec'))?.nome || 'Fornecedor'} ${nPar > 1 ? `(${i + 1}/${nPar})` : ''}`,
+            valor: totalNF / nPar,
+            pgto: $v('nfPgtoForma'),
+            venc: d.toISOString().split('T')[0],
+            createdAt: new Date().toISOString()
+        });
+    }
+    
+    await batch.commit(); 
+    toast('✓ NF LANÇADA, TÍTULOS GERADOS E ESTOQUE SOMADO'); 
+    fecharModal('modalNF'); 
+    audit('ESTOQUE/NF', 'Entrada NF ' + ($v('nfNumero') || 's/n') + ' | R$ ' + totalNF.toFixed(2));
 };
 
-window.checkPgtoNF = function() {
-    const f = $v('nfPgtoForma');
-    if ($('nfDivParcelas')) $('nfDivParcelas').style.display = f === 'Boleto Parcelado' ? 'block' : 'none';
+// ============================================================
+// 3. COMISSÕES (Painel Gestor de RH/Equipe)
+// ============================================================
+window.calcComissoes = function() {
+    const comissoes = {}; 
+    J.equipe.forEach(f => { comissoes[f.id] = { nome: f.nome, val: 0 }; });
+    
+    // Filtra pelo que foi gerado em `os.js` e está pendente
+    J.financeiro.filter(f => f.isComissao && f.mecId && f.status === 'Pendente').forEach(f => { 
+        if (comissoes[f.mecId]) comissoes[f.mecId].val += f.valor || 0; 
+    });
+    
+    if ($('boxComissoes')) {
+        $('boxComissoes').innerHTML = Object.values(comissoes).filter(c => c.val > 0).map(c => `
+            <div class="com-card">
+                <div>
+                    <div class="com-nome">${c.nome}</div>
+                    <div style="font-family:var(--fm);font-size:0.6rem;color:var(--muted)">A PAGAR (PEÇAS + MÃO DE OBRA)</div>
+                </div>
+                <div class="com-val">${moeda(c.val)}</div>
+            </div>
+        `).join('') || '<div style="text-align:center;color:var(--muted);padding:20px;">Sem comissões pendentes no momento</div>';
+    }
 };
 
+// ============================================================
+// 4. EXPORTAÇÃO FINANCEIRA (CSV)
+// ============================================================
 window.exportarFinanceiro = function() {
-    let csv = 'Data;Tipo;Descricao;Pagamento;Valor;Status\n';
-    J.financeiro.forEach(f => {
-        csv += `${dtBr(f.venc)};${f.tipo};${f.desc};${f.pgto || ''};${f.valor.toFixed(2)};${f.status}\n`;
+    if (J.financeiro.length === 0) { toast('⚠ Nenhum dado para exportar', 'warn'); return; }
+    
+    const buscaTipo = $v('filtroFinTipo');
+    const buscaStatus = $v('filtroFinStatus');
+    const buscaMes = $v('filtroFinMes');
+
+    let base = [...J.financeiro];
+    if (buscaTipo) base = base.filter(f => f.tipo === buscaTipo);
+    if (buscaStatus) base = base.filter(f => f.status === buscaStatus);
+    if (buscaMes) base = base.filter(f => (f.venc || '').startsWith(buscaMes));
+    base.sort((a, b) => (b.venc || '') > (a.venc || '') ? 1 : -1);
+
+    let csv = "Vencimento;Tipo_Lancamento;Descricao;Forma_Pagamento;Valor;Status;Auditoria_Notas\n";
+    
+    base.forEach(f => {
+        const venc = dtBr(f.venc);
+        const tipo = f.tipo || '';
+        const desc = (f.desc || '').replace(/;/g, ','); 
+        const pgto = f.pgto || '';
+        const valor = (f.valor || 0).toFixed(2).replace('.', ',');
+        const status = f.status || '';
+        const obs = (f.nota || '').replace(/;/g, ',');
+        
+        csv += `${venc};${tipo};${desc};${pgto};${valor};${status};${obs}\n`;
     });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `financeiro_jarvis_${new Date().toISOString().split('T')[0]}.csv`;
+
+    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Fluxo_de_Caixa_JARVIS_${new Date().getTime()}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    
+    toast('✓ RELATÓRIO EXPORTADO EM CSV');
+    audit('FINANCEIRO', 'Exportou relatório CSV do caixa');
 };
