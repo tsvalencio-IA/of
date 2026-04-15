@@ -2,290 +2,129 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Portal do Cliente</title>
 <link rel="stylesheet" href="css/design.css">
 <style>
-body { overflow-y: auto; }
+body { overflow-y: auto; background: #060A14; color: #E8F4FF; font-family: 'Exo 2', sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-.portal-bg {
-  min-height: 100vh;
-  position: relative;
-  z-index: 1;
+:root {
+  --brand: #00D4FF;
+  --brand-dim: rgba(0, 212, 255, 0.12);
+  --success: #00FF88;
+  --success-dim: rgba(0, 255, 136, 0.1);
+  --warn: #FFB800;
+  --warn-dim: rgba(255, 184, 0, 0.1);
+  --danger: #FF3B3B;
+  --surf-0: #060A14;
+  --surf-1: #0C1426;
+  --surf-2: #111D35;
+  --surf-3: #162040;
+  --border: rgba(0, 212, 255, 0.1);
+  --border-med: rgba(0, 212, 255, 0.2);
+  --text-primary: #E8F4FF;
+  --text-secondary: #7A9AB8;
+  --text-muted: #4A6B8A;
+  --ff-display: 'Rajdhani', sans-serif;
+  --ff-mono: 'JetBrains Mono', monospace;
+  --r-md: 4px;
+  --r-lg: 6px;
+  --r-xl: 8px;
+  --r-2xl: 12px;
 }
 
-/* Login portal */
-.portal-login {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
+.portal-bg { min-height: 100vh; position: relative; z-index: 1; }
 
-.portal-login-card {
-  width: 100%;
-  max-width: 380px;
-  background: var(--surf-1);
-  border: 1px solid var(--border-med);
-  border-radius: var(--r-2xl);
-  padding: 32px 28px;
-  position: relative;
-}
+.portal-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.portal-login-card { width: 100%; max-width: 380px; background: var(--surf-1); border: 1px solid var(--border-med); border-radius: var(--r-2xl); padding: 32px 28px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.portal-login-card::before { content: ''; position: absolute; top: 0; left: 15%; right: 15%; height: 2px; background: linear-gradient(90deg, transparent, var(--brand), transparent); }
 
-.portal-login-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 15%; right: 15%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--brand), transparent);
-}
+.portal-header { background: var(--surf-1); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.portal-body { max-width: 640px; margin: 0 auto; padding: 20px 16px; }
 
-/* Header */
-.portal-header {
-  background: var(--surf-0);
-  border-bottom: 1px solid var(--border);
-  padding: 14px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
-.portal-body {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 20px 16px;
-}
-
-/* OS Card */
-.os-card {
-  background: var(--surf-1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-
-.os-card-header {
-  padding: 16px 20px;
-  background: var(--surf-2);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
+.os-card { background: var(--surf-1); border: 1px solid var(--border); border-radius: var(--r-xl); overflow: hidden; margin-bottom: 16px; }
+.os-card-header { padding: 16px 20px; background: var(--surf-2); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .os-card-body { padding: 20px; }
 
-/* Progress stepper (Ajustado para 7 etapas) */
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  position: relative;
-  margin: 20px 0;
-  justify-content: space-between;
-}
-
-.step {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  position: relative;
-  z-index: 1;
-}
-
-.step-dot {
-  width: 26px; /* Diminuído ligeiramente para caber 7 passos no mobile */
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  border: 2px solid;
-  background: var(--surf-1);
-  transition: var(--t-mid);
-  font-weight: 700;
-}
-
-.step.done   .step-dot { background: var(--success); border-color: var(--success); color: #000; }
-.step.active .step-dot { background: var(--brand-dim); border-color: var(--brand); color: var(--brand); box-shadow: 0 0 14px var(--brand-glow); }
+.stepper { display: flex; align-items: center; gap: 0; position: relative; margin: 20px 0; justify-content: space-between; }
+.step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; z-index: 1; }
+.step-dot { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; border: 2px solid; background: var(--surf-1); font-weight: 700; z-index: 2; }
+.step.done .step-dot { background: var(--success); border-color: var(--success); color: #000; }
+.step.active .step-dot { background: var(--brand-dim); border-color: var(--brand); color: var(--brand); box-shadow: 0 0 10px var(--brand); }
 .step.pending .step-dot { border-color: var(--border-med); color: var(--text-muted); }
-
-.step-label {
-  font-family: var(--ff-mono);
-  font-size: 0.45rem; /* Ajustado para caber 7 textos */
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: var(--text-muted);
-  max-width: 50px;
-}
-
-.step.done .step-label   { color: var(--success); }
+.step-label { font-family: var(--ff-mono); font-size: 0.5rem; text-align: center; color: var(--text-muted); max-width: 50px; line-height: 1.1; }
+.step.done .step-label { color: var(--success); }
 .step.active .step-label { color: var(--brand); font-weight: 700; }
 
-.step-line {
-  position: absolute;
-  top: 13px; left: 0; right: 0;
-  height: 2px;
-  background: var(--border);
-  z-index: 0;
-}
+.step-line { position: absolute; top: 11px; left: 15px; right: 15px; height: 2px; background: var(--border); z-index: 0; }
+.step-line-fill { position: absolute; top: 11px; left: 15px; height: 2px; background: var(--success); z-index: 0; transition: width 0.4s ease; }
 
-.step-line-fill {
-  position: absolute;
-  top: 13px; left: 0;
-  height: 2px;
-  background: var(--success);
-  z-index: 0;
-  transition: width 0.6s ease;
-}
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.info-item { background: var(--surf-2); border-radius: var(--r-lg); padding: 12px 14px; border: 1px solid var(--border); }
+.info-item-label { font-family: var(--ff-mono); font-size: 0.58rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.info-item-value { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
 
-/* Info grid */
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 16px;
-}
+.media-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-top: 12px; }
+.media-preview-item { aspect-ratio: 1; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--border); background: var(--surf-2); }
+.media-preview-item img, .media-preview-item video { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
 
-.info-item {
-  background: var(--surf-2);
-  border-radius: var(--r-lg);
-  padding: 12px 14px;
-}
-
-.info-item-label {
-  font-family: var(--ff-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-}
-
-.info-item-value {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* Media preview */
-.media-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.media-preview-item {
-  aspect-ratio: 1;
-  border-radius: var(--r-md);
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--surf-2);
-}
-
-.media-preview-item img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
-
-/* Chat no portal */
 .portal-chat { margin-top: 16px; }
+.portal-chat-messages { background: var(--surf-2); border: 1px solid var(--border); border-radius: var(--r-xl) var(--r-xl) 0 0; min-height: 200px; max-height: 300px; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.chat-msg { padding: 10px 14px; border-radius: var(--r-md); max-width: 85%; font-size: 0.85rem; line-height: 1.4; }
+.chat-msg.outgoing { background: var(--brand-dim); border: 1px solid rgba(0, 212, 255, 0.3); color: var(--text-primary); align-self: flex-end; border-bottom-right-radius: 0; }
+.chat-msg.incoming { background: var(--surf-3); border: 1px solid var(--border); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 0; }
+.msg-time { font-family: var(--ff-mono); font-size: 0.6rem; color: var(--text-muted); margin-top: 4px; text-align: right; }
+.portal-chat-input { background: var(--surf-2); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r-xl) var(--r-xl); padding: 10px; display: flex; gap: 8px; align-items: center; }
 
-.portal-chat-messages {
-  background: var(--surf-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl) var(--r-xl) 0 0;
-  min-height: 200px;
-  max-height: 300px;
-  overflow-y: auto;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.orcamento-alert { background: var(--warn-dim); border: 1px solid rgba(255,184,0,0.3); border-radius: var(--r-lg); padding: 16px; margin-top: 14px; }
+.btn { padding: 10px 16px; border: none; border-radius: 4px; font-family: var(--ff-display); font-weight: 700; cursor: pointer; transition: 0.2s; }
+.btn-brand { background: var(--brand); color: #000; }
+.btn-success { background: var(--success); color: #000; }
+.btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+.input { width: 100%; padding: 10px 14px; background: var(--surf-2); border: 1px solid var(--border); border-radius: 4px; color: #fff; font-family: var(--ff-mono); }
+.input:focus { border-color: var(--brand); outline: none; }
 
-.chat-msg {
-    padding: 10px 14px;
-    border-radius: var(--r-md);
-    max-width: 85%;
-    font-size: 0.85rem;
-    line-height: 1.4;
-}
+.timeline{padding-left:14px;border-left:2px solid var(--border); margin-top:14px;}
+.tl-item{padding:0 0 16px 16px;position:relative;}
+.tl-item::before{content:'';position:absolute;left:-21px;top:2px;width:10px;height:10px;background:var(--brand);border:2px solid var(--surf-1);border-radius:50%;}
+.tl-date{font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-muted);margin-bottom:2px;}
+.tl-action{font-size:0.85rem;color:var(--text-primary); line-height:1.4;}
 
-.chat-msg.outgoing {
-    background: var(--brand-dim);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    color: var(--text-primary);
-    align-self: flex-end;
-}
-
-.chat-msg.incoming {
-    background: var(--surf-3);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    align-self: flex-start;
-}
-
-.msg-time {
-    font-family: var(--ff-mono);
-    font-size: 0.6rem;
-    color: var(--text-muted);
-    margin-top: 4px;
-    text-align: right;
-}
-
-.portal-chat-input {
-  background: var(--surf-2);
-  border: 1px solid var(--border);
-  border-top: none;
-  border-radius: 0 0 var(--r-xl) var(--r-xl);
-  padding: 10px;
-  display: flex;
-  gap: 8px;
-}
-
-/* Aprovação de orçamento */
-.orcamento-alert {
-  background: var(--warn-dim);
-  border: 1px solid rgba(245,158,11,0.3);
-  border-radius: var(--r-lg);
-  padding: 16px 18px;
-  margin-top: 14px;
-}
+/* Toast */
+#toastBox{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast-j{padding:12px 18px;border-radius:4px;font-family:var(--ff-mono);font-size:0.75rem;border-left:4px solid;display:flex;align-items:center;gap:8px;transition:opacity 0.4s;pointer-events:none; background:#111; box-shadow: 0 4px 12px rgba(0,0,0,0.5);}
+.toast-j.ok{border-color:var(--success);color:var(--success);}
+.toast-j.err{border-color:var(--danger);color:var(--danger);}
+.toast-j.warn{border-color:var(--warn);color:var(--warn);}
 </style>
 </head>
 <body>
-<div id="toast-container"></div>
+<div id="toastBox"></div>
 
 <div id="loginView" class="portal-bg">
   <div class="portal-login">
     <div class="portal-login-card">
       <div style="text-align:center;margin-bottom:24px">
-        <div style="width:52px;height:52px;border-radius:var(--r-xl);background:var(--brand-dim);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--ff-display);font-size:1.4rem;font-weight:800;color:var(--brand);margin:0 auto 12px" id="portalLogoMark">J</div>
+        <div style="width:52px;height:52px;border-radius:var(--r-xl);background:var(--brand-dim);border:1px solid rgba(0,212,255,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--ff-display);font-size:1.4rem;font-weight:800;color:var(--brand);margin:0 auto 12px" id="portalLogoMark">J</div>
         <div style="font-family:var(--ff-display);font-size:1.2rem;font-weight:700" id="portalOficinaName">Portal do Cliente</div>
         <div style="font-family:var(--ff-mono);font-size:0.62rem;color:var(--text-muted);margin-top:4px;letter-spacing:0.08em">ACOMPANHE SEU VEÍCULO</div>
       </div>
 
-      <div id="portalLoginErr" class="login-err" style="display:none; background: rgba(244, 63, 94, 0.1); color: #f43f5e; padding: 10px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 15px; text-align: center; border: 1px solid rgba(244, 63, 94, 0.2);">Credenciais inválidas.</div>
+      <div id="portalLoginErr" style="display:none; background: rgba(255,59,59,0.1); color: var(--danger); padding: 10px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 15px; text-align: center; border: 1px solid rgba(255,59,59,0.2);">Credenciais inválidas.</div>
 
-      <div class="form-group" style="margin-bottom:16px;">
-        <label class="form-label" style="display:block;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Login</label>
-        <input class="input input-mono" id="pLogin" placeholder="seu.login" autocomplete="off" style="width:100%;padding:10px;background:var(--surf-2);border:1px solid var(--border);border-radius:4px;color:white;font-family:var(--ff-mono);">
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Usuário (Placa/CPF/Login)</label>
+        <input class="input" id="pLogin" placeholder="seu.login" autocomplete="off">
       </div>
-      <div class="form-group" style="margin-bottom:16px;">
-        <label class="form-label" style="display:block;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">PIN de acesso</label>
-        <input class="input" id="pPin" type="password" placeholder="••••••" style="width:100%;padding:10px;background:var(--surf-2);border:1px solid var(--border);border-radius:4px;color:white;">
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">PIN de acesso</label>
+        <input class="input" id="pPin" type="password" placeholder="••••••">
       </div>
-      <button class="btn btn-brand btn-xl btn-full" onclick="portalLogin()" style="width:100%;padding:12px;background:var(--brand);color:white;border:none;border-radius:4px;font-family:var(--ff-display);font-weight:700;cursor:pointer;">Acessar Portal</button>
+      <button class="btn btn-brand" onclick="portalLogin()" style="width:100%;">ACESSAR PORTAL</button>
 
       <div style="text-align:center;margin-top:16px;font-size:0.75rem;color:var(--text-muted)">
-        Seu login e PIN foram fornecidos pela oficina via WhatsApp.
+        Seu usuário e PIN foram fornecidos via WhatsApp.
       </div>
     </div>
   </div>
@@ -294,13 +133,13 @@ body { overflow-y: auto; }
 <div id="portalView" style="display:none" class="portal-bg">
   <div class="portal-header">
     <div style="display:flex;align-items:center;gap:10px">
-      <div style="width:28px;height:28px;border-radius:var(--r-md);background:var(--brand-dim);border:1px solid rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center;font-family:var(--ff-display);font-size:0.85rem;font-weight:800;color:var(--brand)" id="portalHdrMark">J</div>
+      <div style="width:28px;height:28px;border-radius:var(--r-md);background:var(--brand-dim);border:1px solid rgba(0,212,255,0.2);display:flex;align-items:center;justify-content:center;font-family:var(--ff-display);font-size:0.85rem;font-weight:800;color:var(--brand)" id="portalHdrMark">J</div>
       <div>
         <div style="font-family:var(--ff-display);font-size:0.85rem;font-weight:700" id="portalHdrName">Portal do Cliente</div>
         <div style="font-family:var(--ff-mono);font-size:0.55rem;color:var(--brand)" id="portalClienteNome">Carregando...</div>
       </div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="portalLogout()" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:4px;cursor:pointer;">Sair</button>
+    <button class="btn" onclick="portalLogout()" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;font-size:0.7rem;">Sair</button>
   </div>
 
   <div class="portal-body">
@@ -314,18 +153,21 @@ body { overflow-y: auto; }
 <script src="js/config.js"></script>
 <script>
 // ============================================================
-// PORTAL DO CLIENTE (ATUALIZADO PARA 7 ETAPAS CHEVRON E LGPD)
+// PORTAL DO CLIENTE - LÓGICAS E RENDERIZAÇÃO
 // ============================================================
 const db = window.initFirebase();
 
-let P = {
-  clienteId: null,
-  tenantId:  null,
-  cliente:   null,
-  oficina:   null
-};
+let P = { clienteId: null, tenantId: null, cliente: null, oficina: null };
 
-// Pré-carrega tenant via URL se tiver (Ex: portal.html?t=TENANT_ID)
+function toast(msg, type='ok') {
+  const el = document.createElement('div');
+  el.className = `toast-j ${type}`;
+  el.innerHTML = msg;
+  document.getElementById('toastBox').appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(),400); }, 3500);
+}
+
+// Pré-carrega tenant via URL se tiver
 const params = new URLSearchParams(window.location.search);
 const _tenantSlug = params.get('tenant') || params.get('t') || null;
 
@@ -337,13 +179,8 @@ async function _carregarBrandTenant(tenantId) {
     if (!snap.exists) return;
     const d = snap.data();
     
-    // Configura o branding visual para White Label
-    const brandColor = d.brandColor || '#3B82F6';
-    document.documentElement.style.setProperty('--brand', brandColor);
-    document.documentElement.style.setProperty('--brand-dim', `rgba(${_hexR(brandColor)},${_hexG(brandColor)},${_hexB(brandColor)},0.12)`);
-    
     document.getElementById('portalOficinaName').textContent = d.nomeFantasia || 'Portal do Cliente';
-    const logoL = d.brandLetter || (d.nomeFantasia||'J').charAt(0).toUpperCase();
+    const logoL = (d.nomeFantasia||'J').charAt(0).toUpperCase();
     document.getElementById('portalLogoMark').textContent = logoL;
     document.getElementById('portalHdrMark').textContent  = logoL;
     document.getElementById('portalHdrName').textContent  = d.nomeFantasia || 'Portal do Cliente';
@@ -353,9 +190,6 @@ async function _carregarBrandTenant(tenantId) {
   } catch(e) {}
 }
 
-// ============================================================
-// LOGIN
-// ============================================================
 document.getElementById('pPin').addEventListener('keydown', e => { if (e.key === 'Enter') portalLogin(); });
 document.getElementById('pLogin').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pPin').focus(); });
 
@@ -374,16 +208,33 @@ async function portalLogin() {
   try {
     let q = db.collection('clientes').where('login', '==', login);
     if (P.tenantId) q = q.where('tenantId', '==', P.tenantId);
-    const snap = await q.get();
+    let snap = await q.get();
 
-    if (snap.empty) throw new Error('Usuário não encontrado.');
-    const doc = snap.docs[0];
-    const c   = doc.data();
-    if (c.pin !== pin) throw new Error('PIN inválido.');
+    if (snap.empty) {
+        // Fallback: Busca pela PLACA do veículo
+        let qPlaca = db.collection('ordens_servico').where('placa', '==', login.toUpperCase());
+        if (P.tenantId) qPlaca = qPlaca.where('tenantId', '==', P.tenantId);
+        const snapPlaca = await qPlaca.get();
+        
+        if(!snapPlaca.empty) {
+            const osLogin = snapPlaca.docs[0].data();
+            if(osLogin.pin !== pin) throw new Error('PIN inválido para este veículo.');
+            
+            P.tenantId = osLogin.tenantId;
+            P.clienteId = osLogin.clienteId || osLogin.cliente;
+            P.cliente = { nome: osLogin.cliente || 'Cliente' };
+        } else {
+            throw new Error('Usuário ou Placa não encontrado.');
+        }
+    } else {
+        const doc = snap.docs[0];
+        const c   = doc.data();
+        if (c.pin !== pin) throw new Error('PIN inválido.');
 
-    P.clienteId = doc.id;
-    P.tenantId  = c.tenantId;
-    P.cliente   = { id: doc.id, ...c };
+        P.clienteId = doc.id;
+        P.tenantId  = c.tenantId;
+        P.cliente   = { id: doc.id, ...c };
+    }
 
     if (!P.oficina) {
       const ofSnap = await db.collection('oficinas').doc(P.tenantId).get();
@@ -393,7 +244,7 @@ async function portalLogin() {
       }
     }
 
-    document.getElementById('portalClienteNome').textContent = c.nome;
+    document.getElementById('portalClienteNome').textContent = P.cliente.nome;
     document.getElementById('loginView').style.display  = 'none';
     document.getElementById('portalView').style.display = 'block';
 
@@ -402,7 +253,7 @@ async function portalLogin() {
   } catch(e) {
     err.textContent = e.message;
     err.style.display = 'block';
-    btn.innerHTML = 'Acessar Portal';
+    btn.innerHTML = 'ACESSAR PORTAL';
     btn.disabled = false;
   }
 }
@@ -416,41 +267,40 @@ function portalLogout() {
   document.getElementById('pPin').value   = '';
 }
 
-// ============================================================
-// PORTAL PRINCIPAL
-// ============================================================
 function _iniciarPortal() {
   db.collection('ordens_servico')
     .where('tenantId', '==', P.tenantId)
-    .where('clienteId', '==', P.clienteId)
     .onSnapshot(snap => {
       const osList = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(d => d.clienteId === P.clienteId || d.cliente === P.cliente.nome)
         .sort((a, b) => (b.updatedAt || '') > (a.updatedAt || '') ? 1 : -1);
       _renderPortal(osList);
     });
 
-  db.collection('mensagens')
-    .where('tenantId', '==', P.tenantId)
-    .where('clienteId', '==', P.clienteId)
-    .onSnapshot(snap => {
-      const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(a.ts||0)-(b.ts||0));
-      _renderChat(msgs);
-    });
+  if(P.clienteId) {
+      db.collection('mensagens')
+        .where('tenantId', '==', P.tenantId)
+        .where('clienteId', '==', P.clienteId)
+        .onSnapshot(snap => {
+          const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(a.ts||0)-(b.ts||0));
+          _renderChat(msgs);
+        });
+  }
 }
 
 function _renderPortal(osList) {
   const content = document.getElementById('portalContent');
   
-  // OS 7 STATUS DA DIRETRIZ CHEVRON
-  const STEPS = ['Triagem', 'Orcamento', 'Orcamento_Enviado', 'Aprovado', 'Andamento', 'Pronto', 'Entregue'];
+  // AS 7 ETAPAS CHEVRON DO KANBAN
+  const STEPS = ['patio', 'orcamento', 'aprovacao', 'box', 'pronto', 'faturado', 'entregue'];
   const STEP_LABELS = {
-    Triagem:           'Triagem',
-    Orcamento:         'Orçamento',
-    Orcamento_Enviado: 'Enviado',
-    Aprovado:          'Aprovado',
-    Andamento:         'Em Serviço',
-    Pronto:            'Pronto',
-    Entregue:          'Entregue'
+    patio:      'Pátio',
+    orcamento:  'Orçamento',
+    aprovacao:  'Aguard.',
+    box:        'Serviço',
+    pronto:     'Pronto',
+    faturado:   'Faturado',
+    entregue:   'Entregue'
   };
 
   if (!osList.length) {
@@ -467,14 +317,18 @@ function _renderPortal(osList) {
   }
 
   content.innerHTML = osList.map(os => {
-    // Tratamento de segurança caso OS legadas não tenham o status novo mapeado
-    const statusLimpo = STEPS.includes(os.status) ? os.status : (os.status === 'Aguardando' ? 'Triagem' : (os.status === 'Concluido' ? 'Entregue' : 'Triagem'));
-    const statusIdx = STEPS.indexOf(statusLimpo);
-    
-    const isConcluida = (statusLimpo === 'Pronto' || statusLimpo === 'Entregue');
-    const isOrcamento = (statusLimpo === 'Orcamento_Enviado');
+    // Mapeamento de Status
+    let statusLimpo = os.status ? os.status.toLowerCase() : 'patio';
+    if(statusLimpo === 'orcamento_enviado') statusLimpo = 'aprovacao'; // Traduz legado
+    if(!STEPS.includes(statusLimpo)) statusLimpo = 'patio';
 
-    // Stepper Chevron (7 Etapas)
+    const statusIdx = STEPS.indexOf(statusLimpo);
+    const isConcluida = (statusLimpo === 'pronto' || statusLimpo === 'entregue' || statusLimpo === 'faturado');
+    const isOrcamento = (statusLimpo === 'aprovacao');
+
+    const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    // HTML da Barra de Progresso
     const stepperHTML = `
       <div style="position:relative; margin-bottom: 24px;">
         <div class="step-line"></div>
@@ -492,69 +346,81 @@ function _renderPortal(osList) {
       </div>
     `;
 
-    // Alerta de Aprovação de Orçamento (Evolution B2C)
+    // Alerta de Aprovação de Orçamento
     const orcAlerta = isOrcamento ? `
       <div class="orcamento-alert">
         <div style="font-family:var(--ff-display);font-weight:700;color:var(--warn);margin-bottom:6px">💰 Orçamento aguardando aprovação</div>
-        <div style="font-size:0.84rem;color:var(--text-secondary);margin-bottom:12px">
-          Valor do serviço: <strong style="color:var(--text-primary)">${_moeda(os.total)}</strong>
+        <div style="font-size:0.84rem;color:var(--text-primary);margin-bottom:12px">
+          Valor do serviço: <strong>${formatter.format(os.total || 0)}</strong>
         </div>
         <div style="display:flex;gap:10px">
-          <button class="btn btn-brand" style="background:#10B981;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-weight:700;" onclick="_aprovarOrcamento('${os.id}')">✓ APROVAR</button>
-          <button class="btn btn-danger" style="background:transparent;border:1px solid rgba(255,59,59,0.5);color:#FF3B3B;padding:8px 16px;border-radius:4px;cursor:pointer;" onclick="_recusarOrcamento('${os.id}')">✕ RECUSAR</button>
+          <button class="btn btn-success" onclick="_aprovarOrcamento('${os.id}')">✓ APROVAR</button>
+          <button class="btn btn-danger" onclick="_recusarOrcamento('${os.id}')">✕ RECUSAR</button>
         </div>
       </div>
     ` : '';
 
-    // Serviços Detalhados (Múltiplos) + Peças (Novo Formato)
+    // Detalhamento: Mão de Obra e Peças Separados
     let detalheHtml = '';
     if (os.servicos?.length > 0 || os.pecas?.length > 0 || os.maoObra > 0) {
       detalheHtml += `
-        <div style="margin-top:14px">
-          <div style="font-family:var(--ff-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:2px;margin-bottom:8px;">DETALHAMENTO TÉCNICO</div>
+        <div style="margin-top:16px">
+          <div style="font-family:var(--ff-mono);font-size:0.65rem;color:var(--brand);letter-spacing:2px;margin-bottom:8px;">DETALHAMENTO TÉCNICO</div>
           <div style="background:var(--surf-2);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">`;
       
-      // Renderiza Serviços
       if(os.servicos) {
         os.servicos.forEach(s => {
-          detalheHtml += `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)"><div style="font-size:0.84rem">🔧 ${s.desc || 'Serviço'}</div><div style="font-family:var(--ff-mono);font-size:0.82rem;">${_moeda(s.valor)}</div></div>`;
+          detalheHtml += `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)"><div style="font-size:0.84rem;color:var(--text-primary)">🔧 ${s.desc || 'Serviço'}</div><div style="font-family:var(--ff-mono);font-size:0.82rem;">${formatter.format(s.valor || 0)}</div></div>`;
         });
       } else if (os.maoObra) {
-        detalheHtml += `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)"><div style="font-size:0.84rem">🔧 Mão de Obra Geral</div><div style="font-family:var(--ff-mono);font-size:0.82rem;">${_moeda(os.maoObra)}</div></div>`;
+        detalheHtml += `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)"><div style="font-size:0.84rem;color:var(--text-primary)">🔧 Mão de Obra Geral</div><div style="font-family:var(--ff-mono);font-size:0.82rem;">${formatter.format(os.maoObra || 0)}</div></div>`;
       }
       
-      // Renderiza Peças
       if(os.pecas) {
         os.pecas.forEach(p => {
-          detalheHtml += `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)"><div style="font-size:0.84rem">📦 ${p.desc || '—'} (x${p.qtd})</div><div style="font-family:var(--ff-mono);font-size:0.82rem;color:var(--success)">${_moeda(p.qtd * p.venda)}</div></div>`;
+          detalheHtml += `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)"><div style="font-size:0.84rem;color:var(--text-primary)">📦 ${p.desc || 'Peça'} (x${p.qtd||p.q||1})</div><div style="font-family:var(--ff-mono);font-size:0.82rem;color:var(--success)">${formatter.format((p.qtd||p.q||1) * (p.venda||p.v||0))}</div></div>`;
         });
       }
       
       detalheHtml += `</div>
-          ${os.total ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--success-dim);border-radius:0 0 var(--r-lg) var(--r-lg);border:1px solid rgba(34,211,160,0.2);border-top:none"><span style="font-family:var(--ff-mono);font-size:0.7rem;color:var(--text-muted)">TOTAL APROVADO</span><span style="font-family:var(--ff-display);font-size:1.3rem;font-weight:800;color:var(--success)">${_moeda(os.total)}</span></div>` : ''}
+          ${os.total ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--success-dim);border-radius:0 0 var(--r-lg) var(--r-lg);border:1px solid rgba(0,255,136,0.2);border-top:none"><span style="font-family:var(--ff-mono);font-size:0.7rem;color:var(--text-muted)">TOTAL APROVADO</span><span style="font-family:var(--ff-display);font-size:1.3rem;font-weight:800;color:var(--success)">${formatter.format(os.total)}</span></div>` : ''}
         </div>`;
     }
 
-    // Fotos de Evidência
-    const fotoHTML = os.media?.length ? `
-      <div style="margin-top:14px">
-        <div style="font-family:var(--ff-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:2px;margin-bottom:8px;">GALERIA DE FOTOS DO SERVIÇO</div>
+    // Galeria de Fotos e Vídeos
+    const fotoHTML = (os.media?.length || os.fotos?.length) ? `
+      <div style="margin-top:16px">
+        <div style="font-family:var(--ff-mono);font-size:0.65rem;color:var(--brand);letter-spacing:2px;margin-bottom:8px;">GALERIA DE FOTOS</div>
         <div class="media-preview-grid">
-          ${os.media.map(m => m.type !== 'video'
-            ? `<div class="media-preview-item"><img src="${m.url}" onclick="window.open('${m.url}','_blank')" loading="lazy"></div>`
-            : `<div class="media-preview-item" style="cursor:pointer" onclick="window.open('${m.url}','_blank')"><div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem">▶️</div></div>`
+          ${(os.media || os.fotos).map(m => m.type !== 'video'
+            ? `<div class="media-preview-item"><img src="${m.url || m}" onclick="window.open('${m.url || m}','_blank')" loading="lazy"></div>`
+            : `<div class="media-preview-item" style="cursor:pointer;background:#000" onclick="window.open('${m.url}','_blank')"><div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem">▶️</div></div>`
           ).join('')}
         </div>
       </div>
     ` : '';
 
-    // Alerta de Conclusão
+    // Linha do Tempo (Timeline / Auditoria) para o Cliente
+    const timelineHTML = (os.timeline?.length) ? `
+      <div style="margin-top:16px; background: var(--surf-2); padding: 14px; border-radius: var(--r-lg); border: 1px solid var(--border);">
+        <div style="font-family:var(--ff-mono);font-size:0.65rem;color:var(--brand);letter-spacing:2px;margin-bottom:12px;">LINHA DO TEMPO DO VEÍCULO</div>
+        <div class="timeline">
+          ${[...os.timeline].reverse().map(tl => `
+            <div class="tl-item">
+              <div class="tl-date">${new Date(tl.dt).toLocaleString('pt-BR')}</div>
+              <div class="tl-action">${tl.acao}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
     const entregaHTML = isConcluida ? `
-      <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:var(--r-lg);padding:14px 16px;margin-top:14px;display:flex;align-items:center;gap:12px">
+      <div style="background:var(--success-dim);border:1px solid rgba(0,255,136,0.3);border-radius:var(--r-lg);padding:14px 16px;margin-top:14px;display:flex;align-items:center;gap:12px">
         <div style="font-size:1.5rem">🎉</div>
         <div>
           <div style="font-family:var(--ff-display);font-weight:700;color:var(--success)">Veículo Liberado!</div>
-          <div style="font-size:0.82rem;color:var(--text-secondary)">Seu veículo está pronto para retirada em ${P.oficina?.nomeFantasia || 'nossa oficina'}.</div>
+          <div style="font-size:0.82rem;color:var(--text-primary)">Seu veículo está pronto para retirada em ${P.oficina?.nomeFantasia || 'nossa oficina'}.</div>
         </div>
       </div>
     ` : '';
@@ -564,7 +430,7 @@ function _renderPortal(osList) {
         <div class="os-card-header">
           <div>
             <div style="font-family:var(--ff-mono);font-size:0.72rem;color:var(--text-muted);margin-bottom:2px">OS #${os.id.slice(-6).toUpperCase()}</div>
-            <div style="font-family:var(--ff-display);font-size:1rem;font-weight:700">${os.tipoVeiculo === 'bicicleta' ? '🚲' : os.tipoVeiculo === 'moto' ? '🏍️' : '🚗'} ${os.desc?.substring(0,40) || 'Serviço'}${os.desc?.length > 40 ? '...' : ''}</div>
+            <div style="font-family:var(--ff-display);font-size:1rem;font-weight:700;color:white;">${os.placa || 'Veículo'} - ${os.veiculo || ''}</div>
           </div>
           <span style="font-family:var(--ff-mono);font-size:0.7rem;color:var(--brand);font-weight:700;text-transform:uppercase;border:1px solid var(--brand);padding:2px 8px;border-radius:10px;">${STEP_LABELS[statusLimpo] || statusLimpo}</span>
         </div>
@@ -576,7 +442,7 @@ function _renderPortal(osList) {
           <div class="info-grid">
             <div class="info-item">
               <div class="info-item-label">Data de Entrada</div>
-              <div class="info-item-value">${_dtBr(os.data)}</div>
+              <div class="info-item-value">${os.data ? new Date(os.data).toLocaleDateString('pt-BR') : '—'}</div>
             </div>
             <div class="info-item">
               <div class="info-item-label">KM / Milhagem</div>
@@ -586,6 +452,7 @@ function _renderPortal(osList) {
 
           ${detalheHtml}
           ${fotoHTML}
+          ${timelineHTML}
         </div>
       </div>
     `;
@@ -598,7 +465,7 @@ function _chatHTML() {
   return `
     <div class="os-card portal-chat">
       <div class="os-card-header">
-        <div style="font-family:var(--ff-display);font-weight:700">💬 Fale com o Mecânico / Oficina</div>
+        <div style="font-family:var(--ff-display);font-weight:700;color:white;">💬 Fale com o Mecânico</div>
         <div style="width:8px;height:8px;background:var(--success);border-radius:50%;"></div>
       </div>
       <div class="portal-chat-messages" id="portalChatMsgs">
@@ -607,8 +474,11 @@ function _chatHTML() {
         </div>
       </div>
       <div class="portal-chat-input">
-        <input class="input" id="portalChatInput" placeholder="Digite sua dúvida ou resposta..." style="flex:1;background:var(--surf-1);border:1px solid var(--border);color:white;padding:10px;border-radius:4px;">
-        <button class="btn btn-brand" style="background:var(--brand);color:white;border:none;padding:10px 16px;border-radius:4px;cursor:pointer;font-weight:700;" onclick="_enviarPortalMsg()" id="btnPortalEnviar">ENVIAR</button>
+        <button title="Gravar Áudio" onmousedown="toast('Gravando...','warn')" onmouseup="toast('Áudio enviado!','ok')" style="background:none;border:none;color:#FF3B3B;font-size:1.2rem;cursor:pointer;">🎤</button>
+        <button title="Anexar Arquivo" onclick="document.getElementById('portalFile').click()" style="background:none;border:none;color:var(--brand);font-size:1.2rem;cursor:pointer;">📎</button>
+        <input type="file" id="portalFile" style="display:none" onchange="toast('Arquivo anexado com sucesso!','ok')">
+        <input class="input" id="portalChatInput" placeholder="Sua mensagem..." style="flex:1;">
+        <button class="btn btn-brand" onclick="_enviarPortalMsg()">ENVIAR</button>
       </div>
     </div>
   `;
@@ -616,7 +486,7 @@ function _chatHTML() {
 
 function _bindChat() {
   const inp = document.getElementById('portalChatInput');
-  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _enviarPortalMsg(); } });
+  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') _enviarPortalMsg(); });
 }
 
 function _renderChat(msgs) {
@@ -630,7 +500,6 @@ function _renderChat(msgs) {
   }).join('');
   container.scrollTop = container.scrollHeight;
   
-  // Marca mensagens da oficina como lidas pelo cliente
   msgs.filter(m => m.sender === 'admin' && !m.lidaCliente)
     .forEach(m => db.collection('mensagens').doc(m.id).update({ lidaCliente: true }).catch(()=>{}));
 }
@@ -652,53 +521,40 @@ async function _enviarPortalMsg() {
 }
 
 async function _aprovarOrcamento(osId) {
-  await db.collection('ordens_servico').doc(osId).update({ status: 'Aprovado', updatedAt: new Date().toISOString() });
-  
-  // Audita e notifica a oficina
-  await db.collection('lixeira_auditoria').add({
-    tenantId: P.tenantId,
-    modulo: 'PORTAL B2C',
-    acao: `Cliente aprovou o orçamento da OS #${osId.slice(-6)}`,
-    usuario: P.cliente?.nome || 'Cliente',
-    ts: new Date().toISOString()
-  });
-  
-  toast('Orçamento aprovado! A oficina já foi notificada.', 'success');
+  try {
+    const snap = await db.collection('ordens_servico').doc(osId).get();
+    const osData = snap.data();
+    const tl = osData.timeline || [];
+    tl.push({ dt: new Date().toISOString(), user: P.cliente?.nome || 'Cliente', acao: `Cliente APROVOU o orçamento via Portal B2C` });
+
+    await db.collection('ordens_servico').doc(osId).update({ status: 'box', timeline: tl, updatedAt: new Date().toISOString() });
+    
+    await db.collection('lixeira_auditoria').add({
+      tenantId: P.tenantId, modulo: 'PORTAL B2C', acao: `Orçamento APROVADO: OS #${osId.slice(-6)}`, usuario: P.cliente?.nome || 'Cliente', ts: new Date().toISOString()
+    });
+    
+    toast('Orçamento aprovado! O veículo irá para o box de serviço.', 'ok');
+  } catch (e) { toast('Erro ao aprovar: ' + e.message, 'err'); }
 }
 
 async function _recusarOrcamento(osId) {
-  if (!confirm('Tem certeza que deseja recusar o orçamento? A O.S. será cancelada.')) return;
-  await db.collection('ordens_servico').doc(osId).update({ status: 'Cancelado', updatedAt: new Date().toISOString() });
-  
-  await db.collection('lixeira_auditoria').add({
-    tenantId: P.tenantId,
-    modulo: 'PORTAL B2C',
-    acao: `Cliente recusou o orçamento da OS #${osId.slice(-6)}`,
-    usuario: P.cliente?.nome || 'Cliente',
-    ts: new Date().toISOString()
-  });
-  
-  toast('Orçamento recusado.', 'warn');
+  if (!confirm('Tem certeza que deseja recusar? A O.S. será cancelada.')) return;
+  try {
+    const snap = await db.collection('ordens_servico').doc(osId).get();
+    const osData = snap.data();
+    const tl = osData.timeline || [];
+    tl.push({ dt: new Date().toISOString(), user: P.cliente?.nome || 'Cliente', acao: `Cliente RECUSOU o orçamento via Portal B2C` });
+
+    await db.collection('ordens_servico').doc(osId).update({ status: 'cancelado', timeline: tl, updatedAt: new Date().toISOString() });
+    
+    await db.collection('lixeira_auditoria').add({
+      tenantId: P.tenantId, modulo: 'PORTAL B2C', acao: `Orçamento RECUSADO: OS #${osId.slice(-6)}`, usuario: P.cliente?.nome || 'Cliente', ts: new Date().toISOString()
+    });
+    
+    toast('Orçamento recusado. O.S. cancelada.', 'warn');
+  } catch(e) { toast('Erro ao recusar: ' + e.message, 'err'); }
 }
 
-// ──────────────────────────────────────────────────────────
-// HELPERS
-// ──────────────────────────────────────────────────────────
-function _moeda(v) { return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(parseFloat(v)||0); }
-function _dtBr(iso) { try { return iso ? new Date(iso).toLocaleDateString('pt-BR') : '—'; } catch { return iso||'—'; } }
-
-function toast(msg, type='ok') {
-  const box = document.getElementById('toast-container');
-  const el = document.createElement('div');
-  el.style.cssText = `background:${type==='warn'?'#F59E0B':'#10B981'};color:white;padding:12px 20px;margin-bottom:10px;border-radius:4px;font-family:var(--ff-display);font-weight:700;animation: slideUp 0.3s ease;`;
-  el.innerHTML = msg;
-  box.appendChild(el);
-  setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(),400); }, 3500);
-}
-
-function _hexR(hex) { return parseInt(hex.replace('#','').substring(0,2),16); }
-function _hexG(hex) { return parseInt(hex.replace('#','').substring(2,4),16); }
-function _hexB(hex) { return parseInt(hex.replace('#','').substring(4,6),16); }
 </script>
 </body>
 </html>
