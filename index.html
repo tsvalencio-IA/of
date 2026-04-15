@@ -87,7 +87,6 @@ body::after {
       <div class="login-sub brand-tagline">Gestão Automotiva Inteligente</div>
     </div>
 
-    <!-- Indicador de sessão salva -->
     <div id="sessionIndicator">
       ✓ Sessão salva — entrando automaticamente...
     </div>
@@ -119,8 +118,14 @@ body::after {
       </div>
     </div>
 
-    <!-- LEMBRAR DE MIM -->
-    <div class="remember-row">
+    <div class="remember-row" style="align-items: flex-start; margin-top: 8px;">
+      <label>
+        <input type="checkbox" id="lgpdConsent">
+        <span style="line-height: 1.3;">Concordo com o tratamento de dados conforme a LGPD (Lei 13.709/18).</span>
+      </label>
+    </div>
+
+    <div class="remember-row" style="margin-bottom: 12px;">
       <label>
         <input type="checkbox" id="rememberMe"> Lembrar meu usuário e senha
       </label>
@@ -166,6 +171,7 @@ window.addEventListener('load', () => {
     document.getElementById('usr').value = saved.usr || '';
     document.getElementById('pwd').value = saved.pwd || '';
     document.getElementById('rememberMe').checked = true;
+    document.getElementById('lgpdConsent').checked = true; // Auto-check LGPD se já tiver guardado
 
     // Se tiver sessão completa salva, redireciona automaticamente
     if (saved.destino && saved.tid) {
@@ -201,8 +207,15 @@ document.getElementById('usr').addEventListener('keydown', e => { if (e.key === 
 async function autenticar() {
   const usr = document.getElementById('usr').value.trim();
   const pwd = document.getElementById('pwd').value.trim();
+  const lgpdConsent = document.getElementById('lgpdConsent').checked;
   const err = document.getElementById('loginErr');
   err.style.display = 'none';
+
+  if (!lgpdConsent) {
+    err.textContent = 'É obrigatório aceitar os termos da LGPD para aceder ao sistema.';
+    err.style.display = 'block';
+    return;
+  }
 
   if (!usr || !pwd) {
     err.textContent = 'Preencha usuário e senha.';
@@ -215,6 +228,15 @@ async function autenticar() {
   btn.disabled = true;
 
   try {
+    // ── CAMADA 0: Master/Superadmin (Dono do SaaS) ──
+    if (usr === "master" && pwd === "123456") {
+      sessionStorage.setItem('j_tid', 'MASTER_ADMIN');
+      sessionStorage.setItem('j_role', 'superadmin');
+      sessionStorage.setItem('j_nome', 'thIAguinho SaaS');
+      window.location.href = 'superadmin.html';
+      return;
+    }
+
     // ── CAMADA 1: Admin/Gestor da oficina → jarvis.html ──
     const snapOf = await db.collection('oficinas').where('usuario', '==', usr).get();
     if (!snapOf.empty) {
