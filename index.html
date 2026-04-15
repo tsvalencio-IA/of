@@ -1,359 +1,249 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JARVIS ERP — Acesso ao Sistema</title>
-<link rel="stylesheet" href="css/design.css">
-<style>
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-  z-index: 0;
-  animation: gridDrift 30s linear infinite;
-}
-@keyframes gridDrift { to { background-position: 48px 48px; } }
-
-.pwd-wrap { position: relative; }
-.pwd-wrap .input { padding-right: 42px; }
-.pwd-toggle {
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  background: none; border: none; color: var(--text-muted); cursor: pointer;
-  font-size: 15px; padding: 4px;
-}
-.pwd-toggle:hover { color: var(--text-primary); }
-
-.remember-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  margin-top: -4px;
-}
-.remember-row label {
-  font-family: var(--ff-mono);
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.remember-row input[type=checkbox] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--brand);
-  cursor: pointer;
-}
-
-.login-card .form-group:nth-child(1) { animation: slideUp 0.4s 0.1s both; }
-.login-card .form-group:nth-child(2) { animation: slideUp 0.4s 0.2s both; }
-.remember-row                        { animation: slideUp 0.4s 0.25s both; }
-.login-card .btn                     { animation: slideUp 0.4s 0.3s both; }
-@keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
-
-/* Indicador de sessão ativa */
-#sessionIndicator {
-  display: none;
-  background: var(--success-dim);
-  border: 1px solid rgba(34,211,160,.3);
-  border-radius: var(--r-md);
-  padding: 10px 14px;
-  margin-bottom: 14px;
-  font-family: var(--ff-mono);
-  font-size: 0.7rem;
-  color: var(--success);
-  text-align: center;
-  animation: slideUp 0.3s ease;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Command — JARVIS ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/design.css">
+    
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+        }
+        body { background-color: var(--bg-main); color: #f1f5f9; }
+        .hidden { display: none !important; }
+        
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.2s;
+        }
+        .kpi-card:hover { transform: translateY(-2px); border-color: var(--brand); }
+        
+        .master-table tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .master-table tr:hover { background: rgba(255,255,255,0.02); }
+        
+        #modalNovaOficina { z-index: 9999; }
+    </style>
 </head>
-<body>
-<div id="toast-container"></div>
+<body class="min-h-screen">
 
-<div class="login-page" style="position:relative;z-index:1">
-  <div class="login-card" style="animation: modal-in 0.3s ease">
+    <header class="bg-black/40 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-white text-xl shadow-lg shadow-emerald-500/20">M</div>
+                <div>
+                    <h1 class="text-lg font-black tracking-tighter uppercase text-white">PAINEL SUPERADMIN</h1>
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Controle de Rede & SaaS</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button onclick="fazerLogout()" class="bg-slate-800 hover:bg-red-600 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                    LOGOUT <i class='bx bx-power-off'></i>
+                </button>
+            </div>
+        </div>
+    </header>
 
-    <div class="login-logo-wrap">
-      <div class="login-logo-mark brand-logo-mark sb-brand-mark">J</div>
-      <div class="login-title brand-name">JARVIS ERP</div>
-      <div class="login-sub brand-tagline">Gestão Automotiva Inteligente</div>
+    <main class="container mx-auto px-6 py-8">
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            <div class="kpi-card p-6 rounded-2xl">
+                <p class="text-slate-400 text-[10px] font-black uppercase mb-1">Total de Unidades</p>
+                <h3 id="statTotal" class="text-3xl font-black text-white">0</h3>
+            </div>
+            <div class="kpi-card p-6 rounded-2xl border-l-4 border-l-emerald-500">
+                <p class="text-emerald-500 text-[10px] font-black uppercase mb-1">Oficinas Ativas</p>
+                <h3 id="statAtivas" class="text-3xl font-black text-white">0</h3>
+            </div>
+            <div class="kpi-card p-6 rounded-2xl border-l-4 border-l-red-500">
+                <p class="text-red-500 text-[10px] font-black uppercase mb-1">Oficinas Bloqueadas</p>
+                <h3 id="statBloqueadas" class="text-3xl font-black text-white">0</h3>
+            </div>
+            <div class="flex items-end">
+                <button onclick="abrirModal()" class="w-full bg-brand p-4 rounded-xl font-black text-sm uppercase tracking-tighter hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
+                    <i class='bx bx-plus-circle text-xl'></i> Adicionar Nova Oficina
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-slate-800/50 rounded-2xl border border-white/5 overflow-hidden">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
+                <h2 class="font-bold flex items-center gap-2"><i class='bx bx-list-ul text-emerald-500'></i> Gestão de Inquilinos</h2>
+                <div class="relative">
+                    <i class='bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500'></i>
+                    <input type="text" placeholder="Filtrar oficina..." class="bg-slate-900 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-xs w-64 focus:border-emerald-500 outline-none">
+                </div>
+            </div>
+            
+            <table class="w-full text-left master-table">
+                <thead class="bg-black/20 text-slate-500 text-[10px] font-black uppercase">
+                    <tr>
+                        <th class="px-6 py-4">Dados da Unidade</th>
+                        <th class="px-6 py-4">Gestor / Acesso</th>
+                        <th class="px-6 py-4 text-center">Status</th>
+                        <th class="px-6 py-4 text-right">Ações de Controle</th>
+                    </tr>
+                </thead>
+                <tbody id="listaOficinas" class="text-sm">
+                    </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="modalNovaOficina" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 w-full max-w-md rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+            <div class="p-6 bg-black/40 border-b border-white/5 flex justify-between items-center">
+                <h3 class="font-black uppercase tracking-tighter text-white">Nova Unidade Jarvis</h3>
+                <button onclick="fecharModal()" class="text-slate-500 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <form id="formCadastroOficina" class="p-8 space-y-5">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">Nome Fantasia da Oficina</label>
+                    <input type="text" id="cadNome" required class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">E-mail do Gestor (Será o Usuário)</label>
+                    <input type="email" id="cadEmail" required class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand outline-none transition-all">
+                </div>
+                
+                <div class="bg-blue-500/5 p-4 rounded-xl border border-blue-500/10">
+                    <p class="text-[10px] text-blue-400 font-bold uppercase mb-1">Configuração de Acesso Inicial</p>
+                    <p class="text-[9px] text-slate-500">A senha padrão gerada será: <b>123456</b></p>
+                </div>
+
+                <div class="flex items-start gap-3 py-2">
+                    <input type="checkbox" id="lgpdMaster" required class="mt-1">
+                    <label for="lgpdMaster" class="text-[10px] text-slate-400 leading-relaxed">
+                        Confirmo que esta unidade está ciente dos termos de uso e da <b>Lei Geral de Proteção de Dados (LGPD)</b> para operação no Brasil.
+                    </label>
+                </div>
+
+                <button type="submit" id="btnSalvar" class="w-full bg-emerald-600 py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-emerald-500 transition-all">
+                    CADASTRAR E ATIVAR UNIDADE
+                </button>
+            </form>
+        </div>
     </div>
 
-    <div id="sessionIndicator">
-      ✓ Sessão salva — entrando automaticamente...
-    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="js/config.js"></script>
+    
+    <script>
+        const db = window.initFirebase();
 
-    <div id="loginErr" class="login-err">Usuário ou senha incorretos.</div>
+        function escutarOficinas() {
+            db.collection('oficinas').orderBy('dataCriacao', 'desc').onSnapshot(snap => {
+                const lista = document.getElementById('listaOficinas');
+                lista.innerHTML = '';
+                
+                let total = 0, ativas = 0, bloqueadas = 0;
 
-    <div class="form-group">
-      <label class="form-label">Usuário de acesso</label>
-      <input
-        class="input input-mono"
-        id="usr"
-        type="text"
-        placeholder="seu.usuario"
-        autocomplete="username"
-        spellcheck="false"
-        autocapitalize="off">
-    </div>
+                snap.forEach(doc => {
+                    const of = doc.data();
+                    total++;
+                    if(of.status === 'Ativo') ativas++; else bloqueadas++;
 
-    <div class="form-group">
-      <label class="form-label">Senha</label>
-      <div class="pwd-wrap">
-        <input
-          class="input"
-          id="pwd"
-          type="password"
-          placeholder="••••••••"
-          autocomplete="current-password">
-        <button class="pwd-toggle" type="button" onclick="_togglePwd()" id="pwdToggle" title="Ver senha">👁</button>
-      </div>
-    </div>
+                    const statusClass = of.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500';
+                    const btnAcao = of.status === 'Ativo' 
+                        ? `<button onclick="alterarStatus('${doc.id}', 'Bloqueado')" class="text-red-400 hover:underline">Bloquear</button>`
+                        : `<button onclick="alterarStatus('${doc.id}', 'Ativo')" class="text-emerald-400 hover:underline">Ativar</button>`;
 
-    <div class="remember-row" style="align-items: flex-start; margin-top: 8px;">
-      <label>
-        <input type="checkbox" id="lgpdConsent">
-        <span style="line-height: 1.3;">Concordo com o tratamento de dados conforme a LGPD (Lei 13.709/18).</span>
-      </label>
-    </div>
+                    lista.innerHTML += `
+                        <tr>
+                            <td class="px-6 py-4">
+                                <span class="font-bold text-white uppercase">${of.nomeFantasia}</span><br>
+                                <span class="text-[9px] font-mono text-slate-600">ID: ${doc.id}</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-slate-300">${of.emailGestor}</span><br>
+                                <span class="text-[10px] text-slate-500">User: ${of.usuario}</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="${statusClass} px-3 py-1 rounded-full text-[10px] font-black uppercase border border-current/10">${of.status}</span>
+                            </td>
+                            <td class="px-6 py-4 text-right flex items-center justify-end gap-4">
+                                ${btnAcao}
+                                <button class="text-slate-500 hover:text-white text-xl"><i class='bx bx-dots-vertical-rounded'></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
 
-    <div class="remember-row" style="margin-bottom: 12px;">
-      <label>
-        <input type="checkbox" id="rememberMe"> Lembrar meu usuário e senha
-      </label>
-    </div>
+                document.getElementById('statTotal').textContent = total;
+                document.getElementById('statAtivas').textContent = ativas;
+                document.getElementById('statBloqueadas').textContent = bloqueadas;
+            });
+        }
 
-    <button class="btn btn-brand btn-xl btn-full" id="btnLogin" onclick="autenticar()" style="margin-top:8px">
-      Entrar no Sistema
-    </button>
+        document.getElementById('formCadastroOficina').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvar');
+            btn.disabled = true;
+            btn.innerHTML = "PROCESSANDO...";
 
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <div class="status-dot online"></div>
-      <span style="font-family:var(--ff-mono);font-size:0.62rem;color:var(--text-muted)">SISTEMA OPERACIONAL</span>
-    </div>
-  </div>
+            const nome = document.getElementById('cadNome').value.trim();
+            const email = document.getElementById('cadEmail').value.trim();
 
-  <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-disabled)">
-    <span class="brand-footer">Powered by thIAguinho Soluções · 2026</span>
-  </div>
-</div>
+            try {
+                await db.collection('oficinas').add({
+                    nomeFantasia: nome,
+                    emailGestor: email,
+                    usuario: email,
+                    senha: "123456", 
+                    status: 'Ativo',
+                    nicho: 'carros',
+                    dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
+                    dataLgpd: firebase.firestore.FieldValue.serverTimestamp()
+                });
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="js/config.js"></script>
-<script>
-// ─── LIMPA APENAS sessionStorage ao carregar o login ───
-// NÃO limpa o localStorage (onde ficam as credenciais salvas)
-sessionStorage.clear();
+                alert("Unidade Cadastrada com Sucesso!");
+                fecharModal();
+                document.getElementById('formCadastroOficina').reset();
 
-const db = window.initFirebase();
+            } catch (err) {
+                console.error("Erro ao cadastrar:", err);
+                alert("Falha no cadastro. Verifique as regras do Firebase.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "CADASTRAR E ATIVAR UNIDADE";
+            }
+        };
 
-// ─── APLICAR BRAND SE JÁ EXISTE ───
-window.addEventListener('load', () => {
-  try {
-    const brand = JSON.parse(localStorage.getItem('j_saved_brand') || 'null');
-    if (brand) window.aplicarBrand(brand);
-  } catch(e) {}
-});
+        async function alterarStatus(id, novoStatus) {
+            if(!confirm(`Deseja alterar o status desta oficina para ${novoStatus}?`)) return;
+            try {
+                await db.collection('oficinas').doc(id).update({ status: novoStatus });
+            } catch(e) { alert("Erro ao atualizar status."); }
+        }
 
-// ─── CARREGAR CREDENCIAIS SALVAS ───
-(function carregarCredenciais() {
-  const saved = JSON.parse(localStorage.getItem('j_saved_login') || 'null');
-  if (saved) {
-    document.getElementById('usr').value = saved.usr || '';
-    document.getElementById('pwd').value = saved.pwd || '';
-    document.getElementById('rememberMe').checked = true;
-    document.getElementById('lgpdConsent').checked = true; // Auto-check LGPD se já tiver guardado
+        function abrirModal() { document.getElementById('modalNovaOficina').classList.remove('hidden'); }
+        function fecharModal() { document.getElementById('modalNovaOficina').classList.add('hidden'); }
+        
+        async function fazerLogout() { 
+            sessionStorage.clear(); 
+            localStorage.removeItem('j_role_master');
+            try { await firebase.auth().signOut(); } catch(e){}
+            window.location.href = 'index.html'; 
+        }
 
-    // Se tiver sessão completa salva, redireciona automaticamente
-    if (saved.destino && saved.tid) {
-      const indicator = document.getElementById('sessionIndicator');
-      indicator.style.display = 'block';
-
-      // Restaura sessão
-      Object.entries(saved.session || {}).forEach(([k, v]) => {
-        sessionStorage.setItem(k, v);
-      });
-
-      // Redireciona após 1 segundo (permite cancelar se quiser)
-      setTimeout(() => {
-        window.location.href = saved.destino;
-      }, 1200);
-    }
-  }
-})();
-
-// ─── TOGGLE SENHA ───
-function _togglePwd() {
-  const p = document.getElementById('pwd');
-  const btn = document.getElementById('pwdToggle');
-  if (p.type === 'password') { p.type = 'text'; btn.textContent = '🙈'; }
-  else { p.type = 'password'; btn.textContent = '👁'; }
-}
-
-// ─── ATALHOS DE TECLADO ───
-document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') autenticar(); });
-document.getElementById('usr').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pwd').focus(); });
-
-// ─── AUTENTICAR ───
-async function autenticar() {
-  const usr = document.getElementById('usr').value.trim();
-  const pwd = document.getElementById('pwd').value.trim();
-  const lgpdConsent = document.getElementById('lgpdConsent').checked;
-  const err = document.getElementById('loginErr');
-  err.style.display = 'none';
-
-  if (!lgpdConsent) {
-    err.textContent = 'É obrigatório aceitar os termos da LGPD para aceder ao sistema.';
-    err.style.display = 'block';
-    return;
-  }
-
-  if (!usr || !pwd) {
-    err.textContent = 'Preencha usuário e senha.';
-    err.style.display = 'block';
-    return;
-  }
-
-  const btn = document.getElementById('btnLogin');
-  btn.innerHTML = '<div class="spinner"></div> Autenticando...';
-  btn.disabled = true;
-
-  try {
-    // ── CAMADA 0: Master/Superadmin (Dono do SaaS) ──
-    if (usr === "master" && pwd === "123456") {
-      sessionStorage.setItem('j_tid', 'MASTER_ADMIN');
-      sessionStorage.setItem('j_role', 'superadmin');
-      sessionStorage.setItem('j_nome', 'thIAguinho SaaS');
-      window.location.href = 'superadmin.html';
-      return;
-    }
-
-    // ── CAMADA 1: Admin/Gestor da oficina → jarvis.html ──
-    const snapOf = await db.collection('oficinas').where('usuario', '==', usr).get();
-    if (!snapOf.empty) {
-      const doc = snapOf.docs[0];
-      const d   = doc.data();
-
-      if (d.senha !== pwd) throw new Error('Senha incorreta.');
-      if (d.status === 'Bloqueado') throw new Error('Licença bloqueada. Contate o suporte.');
-
-      const sessao = {
-        j_tid:          doc.id,
-        j_tnome:        d.nomeFantasia || 'Oficina',
-        j_role:         'admin',
-        j_nome:         d.nomeFantasia || 'Gestor',
-        j_gemini:       d.apiKeys?.gemini      || '',
-        j_nicho:        d.nicho                || 'carros',
-        j_cloud_name:   d.apiKeys?.cloudName   || 'dmuvm1o6m',
-        j_cloud_preset: d.apiKeys?.cloudPreset || 'evolution',
-      };
-
-      const brand = {
-        name:       d.brandName    || d.nomeFantasia,
-        tagline:    d.brandTagline || 'Gestão Automotiva',
-        logoLetter: d.brandLetter  || (d.nomeFantasia || 'J').charAt(0).toUpperCase(),
-        color:      d.brandColor   || '#3B82F6',
-        footer:     d.brandFooter  || `${d.nomeFantasia} · Powered by JARVIS ERP`
-      };
-      brand.colorDim  = _hexDim(brand.color, 0.12);
-      brand.colorGlow = _hexDim(brand.color, 0.25);
-      sessao.j_brand = JSON.stringify(brand);
-
-      // Salva na sessão
-      Object.entries(sessao).forEach(([k, v]) => sessionStorage.setItem(k, v));
-
-      // Lembrar de mim
-      _salvarCredenciais(usr, pwd, 'jarvis.html', doc.id, sessao, brand);
-
-      window.location.href = 'jarvis.html';
-      return;
-    }
-
-    // ── CAMADA 2: Funcionário/Equipe → equipe.html ──
-    const snapFn = await db.collection('funcionarios').where('usuario', '==', usr).get();
-    if (!snapFn.empty) {
-      const docF = snapFn.docs[0];
-      const dF   = docF.data();
-
-      if (dF.senha !== pwd) throw new Error('Senha incorreta.');
-
-      const mae = await db.collection('oficinas').doc(dF.tenantId).get();
-      if (!mae.exists || mae.data().status === 'Bloqueado') throw new Error('Oficina bloqueada.');
-
-      const maeData = mae.data();
-
-      const sessao = {
-        j_tid:          dF.tenantId,
-        j_tnome:        maeData.nomeFantasia || 'Oficina',
-        j_role:         dF.cargo === 'gerente' ? 'gerente' : 'equipe',
-        j_nome:         dF.nome,
-        j_fid:          docF.id,
-        j_comissao:     String(dF.comissao || 0),
-        j_gemini:       maeData.apiKeys?.gemini      || '',
-        j_nicho:        maeData.nicho                || 'carros',
-        j_cloud_name:   maeData.apiKeys?.cloudName   || 'dmuvm1o6m',
-        j_cloud_preset: maeData.apiKeys?.cloudPreset || 'evolution',
-      };
-
-      const brand = {
-        name:       maeData.brandName    || maeData.nomeFantasia,
-        logoLetter: maeData.brandLetter  || (maeData.nomeFantasia || 'J').charAt(0).toUpperCase(),
-        color:      maeData.brandColor   || '#3B82F6',
-        footer:     maeData.brandFooter  || `${maeData.nomeFantasia} · Powered by JARVIS ERP`
-      };
-      brand.colorDim = _hexDim(brand.color, 0.12);
-      sessao.j_brand = JSON.stringify(brand);
-
-      Object.entries(sessao).forEach(([k, v]) => sessionStorage.setItem(k, v));
-
-      _salvarCredenciais(usr, pwd, 'equipe.html', dF.tenantId, sessao, brand);
-
-      window.location.href = 'equipe.html';
-      return;
-    }
-
-    throw new Error('Usuário não encontrado no sistema.');
-
-  } catch (e) {
-    err.textContent = e.message;
-    err.style.display = 'block';
-    btn.innerHTML = 'Entrar no Sistema';
-    btn.disabled = false;
-  }
-}
-
-// ─── SALVAR CREDENCIAIS NO LOCALSTORAGE ───
-function _salvarCredenciais(usr, pwd, destino, tid, session, brand) {
-  const lembrar = document.getElementById('rememberMe').checked;
-  if (lembrar) {
-    localStorage.setItem('j_saved_login', JSON.stringify({
-      usr, pwd, destino, tid, session
-    }));
-    localStorage.setItem('j_saved_brand', JSON.stringify(brand));
-  } else {
-    // Se desmarcou, apaga o que estava salvo
-    localStorage.removeItem('j_saved_login');
-    localStorage.removeItem('j_saved_brand');
-  }
-}
-
-// ─── HELPER COR ───
-function _hexDim(hex, alpha) {
-  const c = hex.replace('#', '');
-  const r = parseInt(c.substring(0,2), 16);
-  const g = parseInt(c.substring(2,4), 16);
-  const b = parseInt(c.substring(4,6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-</script>
+        window.onload = () => {
+            const role = sessionStorage.getItem('j_role') || localStorage.getItem('j_role_master');
+            if (role !== 'superadmin') {
+                window.location.href = 'index.html';
+                return;
+            }
+            escutarOficinas();
+        };
+    </script>
 </body>
 </html>
