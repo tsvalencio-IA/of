@@ -7,7 +7,6 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-    
     <link rel="stylesheet" href="css/design.css">
     
     <style>
@@ -92,7 +91,7 @@
                     </tr>
                 </thead>
                 <tbody id="listaOficinas" class="text-sm">
-                    </tbody>
+                </tbody>
             </table>
         </div>
     </main>
@@ -141,7 +140,23 @@
     <script>
         const db = window.initFirebase();
 
-        // 1. ESCUTA REALTIME DAS OFICINAS
+        // ESPERA O FIREBASE AUTH CONFIRMAR O USUÁRIO ANTES DE PUXAR OS DADOS
+        window.onload = () => {
+            const role = sessionStorage.getItem('j_role') || localStorage.getItem('j_role_master');
+            if (role !== 'superadmin') {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    escutarOficinas();
+                } else {
+                    fazerLogout();
+                }
+            });
+        };
+
         function escutarOficinas() {
             db.collection('oficinas').orderBy('dataCriacao', 'desc').onSnapshot(snap => {
                 const lista = document.getElementById('listaOficinas');
@@ -183,10 +198,11 @@
                 document.getElementById('statTotal').textContent = total;
                 document.getElementById('statAtivas').textContent = ativas;
                 document.getElementById('statBloqueadas').textContent = bloqueadas;
+            }, (error) => {
+                console.error("Erro ao escutar oficinas (Permissão negada ou auth pendente):", error);
             });
         }
 
-        // 2. CADASTRO DE NOVA OFICINA 
         document.getElementById('formCadastroOficina').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSalvar');
@@ -197,7 +213,7 @@
             const email = document.getElementById('cadEmail').value.trim();
 
             try {
-                // Salvando com o formato ISO nativo do Javascript
+                // Voltou o padrão original exigido pelo seu Firebase para evitar erros de permissão
                 await db.collection('oficinas').add({
                     nomeFantasia: nome,
                     emailGestor: email,
@@ -205,8 +221,8 @@
                     senha: "123456", 
                     status: 'Ativo',
                     nicho: 'carros',
-                    dataCriacao: new Date().toISOString(),
-                    dataLgpd: new Date().toISOString()
+                    dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
+                    dataLgpd: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
                 alert("Unidade Cadastrada com Sucesso!");
@@ -215,14 +231,13 @@
 
             } catch (err) {
                 console.error("Erro ao cadastrar:", err);
-                alert("Falha no cadastro. Erro: " + err.message);
+                alert("Falha no cadastro. Verifique as regras do Firebase.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = "CADASTRAR E ATIVAR UNIDADE";
             }
         };
 
-        // 3. CONTROLE DE STATUS
         async function alterarStatus(id, novoStatus) {
             if(!confirm(`Deseja alterar o status desta oficina para ${novoStatus}?`)) return;
             try {
@@ -230,7 +245,6 @@
             } catch(e) { alert("Erro ao atualizar status."); }
         }
 
-        // UI HELPERS
         function abrirModal() { document.getElementById('modalNovaOficina').classList.remove('hidden'); }
         function fecharModal() { document.getElementById('modalNovaOficina').classList.add('hidden'); }
         
@@ -240,16 +254,6 @@
             try { await firebase.auth().signOut(); } catch(e){}
             window.location.href = 'index.html'; 
         }
-
-        // Inicialização com validação de sessão
-        window.onload = () => {
-            const role = sessionStorage.getItem('j_role') || localStorage.getItem('j_role_master');
-            if (role !== 'superadmin') {
-                window.location.href = 'index.html';
-                return;
-            }
-            escutarOficinas();
-        };
     </script>
 </body>
 </html>
