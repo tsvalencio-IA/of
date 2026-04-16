@@ -1,466 +1,280 @@
 /**
  * JARVIS ERP — clientes.js
- * CRM Clientes, Veículos, Estoque, Equipe, Fornecedores, Agenda
+ * Gestão de Clientes B2C, Veículos (Frota), Estoque, Fornecedores e Equipe (RH)
+ * Bug 1 Resolvido: Salvamento garantido de Senhas/PINs para App de Cliente
  */
 'use strict';
 
-// ── CLIENTES ───────────────────────────────────────────────
+// ── CLIENTES B2C ───────────────────────────────────────────
 window.renderClientes = function() {
   const tb = document.getElementById('tbClientes'); if (!tb) return;
-  if (!J.clientes.length) { tb.innerHTML = tableEmpty(5,'👥','Nenhum cliente cadastrado'); return; }
+  if (!J.clientes.length) { tb.innerHTML='<tr><td colspan="5" class="table-empty">Nenhum cliente cadastrado.</td></tr>'; return; }
+  
   tb.innerHTML = J.clientes.map(c => {
-    const nVeics = J.veiculos.filter(v => v.clienteId === c.id).length;
-    const totalOS = J.os.filter(o => o.clienteId===c.id && ['Pronto','Entregue'].includes(o.status))
-                       .reduce((a,o)=>a+(o.total||0), 0);
+    const veic = J.veiculos.filter(v => v.clienteId === c.id);
+    const vPlacas = veic.map(v => `<span class="placa">${v.placa}</span>`).join(' ');
+    const osCount = J.os.filter(o => o.clienteId === c.id).length;
     return `<tr>
+      <td><div style="font-family:var(--fd);font-weight:700;font-size:.9rem">${c.nome}</div><div style="font-family:var(--fm);font-size:.65rem;color:var(--text-muted)">${c.doc||'Sem CPF'}</div></td>
+      <td class="font-mono">${c.wpp||'—'}</td>
+      <td>${vPlacas || '—'}</td>
+      <td>${osCount}</td>
       <td>
-        <div style="font-weight:600">${c.nome}</div>
-        <div style="font-family:var(--fm);font-size:0.65rem;color:var(--text-muted)">${c.doc||''}</div>
-      </td>
-      <td style="font-family:var(--fm);font-size:0.78rem">${c.wpp||'—'}</td>
-      <td><span class="badge badge-brand">${nVeics}</span></td>
-      <td style="font-family:var(--fm);font-size:0.78rem;color:var(--success)">${window.moeda?moeda(totalOS):totalOS}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="prepCliente('edit','${c.id}');abrirModal('modalCliente')" style="margin-right:4px">✏</button>
-        ${c.wpp?`<button class="btn btn-success btn-sm" onclick="abrirWpp('${c.wpp}','Olá ${c.nome}! Aqui é a ${J.tnome}.')" title="WhatsApp" style="margin-right:4px">💬</button>`:''}
-        <button class="btn btn-danger btn-sm" onclick="deletarCliente('${c.id}')">🗑</button>
+        <button class="btn btn-brand btn-sm" onclick="prepCliente('edit','${c.id}');abrirModal('modalCliente')">Editar</button>
       </td>
     </tr>`;
   }).join('');
 };
 
-window.prepCliente = function(mode='add', id=null) {
-  ['cliId','cliNome','cliWpp','cliDoc','cliEmail','cliLogin','cliPin','cliCep','cliRua','cliNum','cliBairro','cliCidade']
-    .forEach(f => _sv(f,''));
+window.prepCliente = function(mode, id=null) {
+  const campos = ['cliId','cliNome','cliWpp','cliDoc','cliEmail','cliCep','cliRua','cliNum','cliBairro','cliCidade','cliLogin','cliPin'];
+  campos.forEach(f => window._sv && _sv(f,''));
   
-  if (mode === 'add') {
-    _sv('cliPin', window.randId ? randId(6).toUpperCase() : Math.random().toString(36).slice(-6).toUpperCase());
-  }
-
   if (mode==='edit' && id) {
-    const c = J.clientes.find(x=>x.id===id); if (!c) return;
-    _sv('cliId', c.id); _sv('cliNome', c.nome||''); _sv('cliWpp', c.wpp||'');
-    _sv('cliDoc', c.doc||''); _sv('cliEmail', c.email||'');
-    _sv('cliLogin', c.login||''); _sv('cliPin', c.pin||'');
-    _sv('cliCep', c.cep||''); _sv('cliRua', c.rua||'');
-    _sv('cliNum', c.num||''); _sv('cliBairro', c.bairro||'');
-    _sv('cliCidade', c.cidade||'');
+    const c = J.clientes.find(x => x.id === id); if (!c) return;
+    campos.forEach(f => { const key=f.replace('cli','').toLowerCase(); _sv(f, c[key]||''); });
+    _sv('cliNome', c.nome||''); _sv('cliWpp', c.wpp||''); _sv('cliDoc', c.doc||''); _sv('cliEmail', c.email||'');
+    _sv('cliCep', c.cep||''); _sv('cliRua', c.rua||''); _sv('cliNum', c.num||''); _sv('cliBairro', c.bairro||''); _sv('cliCidade', c.cidade||'');
+    _sv('cliLogin', c.login||''); _sv('cliPin', c.pin||''); _sv('cliId', c.id);
+  } else {
+    _sv('cliPin', Math.random().toString(36).slice(-6).toUpperCase());
   }
 };
 
 window.salvarCliente = async function() {
-  const nome = _v('cliNome');
-  if (!nome) { window.toastWarn && toastWarn('⚠ Nome é obrigatório'); return; }
+  const id=window._v?_v('cliId'):document.getElementById('cliId').value;
+  const nome=_v('cliNome'); if(!nome){ window.toastWarn&&toastWarn('O Nome é obrigatório'); return; }
 
-  const doc  = _v('cliDoc');
-  const wpp  = _v('cliWpp');
-  const email= _v('cliEmail');
-  const id   = _v('cliId');
-  if (doc) {
-    const dup = J.clientes.find(c => c.doc===doc && c.id!==id);
-    if (dup) { window.toastWarn && toastWarn(`⚠ CPF já cadastrado para: ${dup.nome}`); return; }
-  }
+  // 🔴 CORREÇÃO (BUG 1): Impede salvamento de login "Vazio" garantindo o Fallback 
+  let loginFinal = _v('cliLogin');
+  if(!loginFinal) loginFinal = _v('cliEmail') || _v('cliDoc') || _v('cliWpp') || (nome.split(' ')[0] + Math.floor(Math.random()*999)).toLowerCase();
+  
+  let pinFinal = _v('cliPin');
+  if(!pinFinal) pinFinal = Math.random().toString(36).slice(-6).toUpperCase();
 
-  // CORREÇÃO (BUG 1): Garantir que Login e Senha (PIN) do cliente sejam SEMPRE salvos,
-  // criando defaults seguros caso a oficina não os digite.
-  let loginDefinitivo = _v('cliLogin');
-  let pinDefinitivo   = _v('cliPin');
-
-  if (!loginDefinitivo) {
-    loginDefinitivo = email || doc || wpp || (nome.split(' ')[0].toLowerCase() + Math.floor(Math.random()*10000));
-  }
-  if (!pinDefinitivo) {
-    pinDefinitivo = window.randId ? randId(6).toUpperCase() : Math.random().toString(36).slice(-6).toUpperCase();
-  }
-
-  _sv('cliLogin', loginDefinitivo);
-  _sv('cliPin', pinDefinitivo);
-
-  const p = {
-    tenantId: J.tid, nome, wpp, doc, email: email,
-    login: loginDefinitivo, pin: pinDefinitivo,
-    cep: _v('cliCep'), rua: _v('cliRua'), num: _v('cliNum'),
-    bairro: _v('cliBairro'), cidade: _v('cliCidade'),
+  const payload = {
+    tenantId: J.tid, nome,
+    wpp: _v('cliWpp'), doc: _v('cliDoc'), email: _v('cliEmail'),
+    cep: _v('cliCep'), rua: _v('cliRua'), num: _v('cliNum'), bairro: _v('cliBairro'), cidade: _v('cliCidade'),
+    login: loginFinal.replace(/\s/g,''),
+    pin: pinFinal,
     updatedAt: new Date().toISOString()
   };
 
-  if (id) await J.db.collection('clientes').doc(id).update(p);
-  else { p.createdAt = new Date().toISOString(); await J.db.collection('clientes').add(p); }
-
-  window.toastOk && toastOk('✓ Cliente salvo!');
-  window.fecharModal && fecharModal('modalCliente');
-  window.audit && audit('CLIENTES', `Salvou cliente ${nome}`);
+  try {
+    if(id){
+      await J.db.collection('clientes').doc(id).update(payload);
+      window.toastOk && toastOk('Cliente atualizado!');
+      window.audit && audit('CLIENTES', `Editou cliente: ${nome}`);
+    } else {
+      payload.createdAt = new Date().toISOString();
+      await J.db.collection('clientes').add(payload);
+      window.toastOk && toastOk('Novo cliente cadastrado!');
+      window.audit && audit('CLIENTES', `Cadastrou cliente: ${nome}`);
+    }
+    window.fecharModal && fecharModal('modalCliente');
+  } catch(e){ window.toastErr && toastErr('Erro: '+e.message); }
 };
 
-window.deletarCliente = async function(id) {
-  const ok = await confirmar('Deletar este cliente? Veículos vinculados serão mantidos.', 'Atenção');
-  if (!ok) return;
-  await J.db.collection('clientes').doc(id).delete();
-  window.toastOk && toastOk('✓ Cliente removido');
-  window.audit && audit('CLIENTES', `Deletou cliente ${id}`);
+window.buscarCEP = async function(cepStr) {
+  const cep = cepStr.replace(/\D/g,''); if(cep.length!==8) return;
+  try {
+    const r=await fetch(`https://viacep.com.br/ws/${cep}/json/`); const d=await r.json();
+    if(!d.erro){ window._sv&&_sv('cliRua',d.logradouro); _sv('cliBairro',d.bairro); _sv('cliCidade',d.localidade); document.getElementById('cliNum')?.focus(); }
+  } catch(e){}
 };
+
 
 // ── VEÍCULOS ───────────────────────────────────────────────
 window.renderVeiculos = function() {
   const tb = document.getElementById('tbVeiculos'); if (!tb) return;
-  if (!J.veiculos.length) { tb.innerHTML = tableEmpty(6,'🚗','Nenhum veículo cadastrado'); return; }
+  if (!J.veiculos.length) { tb.innerHTML='<tr><td colspan="6" class="table-empty">Nenhum veículo vinculado.</td></tr>'; return; }
+  
   tb.innerHTML = J.veiculos.map(v => {
     const c = J.clientes.find(x => x.id === v.clienteId);
     return `<tr>
-      <td><span class="placa">${v.placa||'—'}</span></td>
-      <td>${window.badgeTipo?badgeTipo(v.tipo||'carro'):v.tipo}</td>
-      <td>
-        <div style="font-weight:600">${v.modelo||'—'}</div>
-        <div style="font-size:0.7rem;color:var(--text-muted)">${v.ano||''} ${v.cor?'· '+v.cor:''}</div>
-      </td>
+      <td><span class="placa">${v.placa||'MOTO/S-PL'}</span></td>
+      <td><span class="badge badge-brand">${v.tipo||'carro'}</span></td>
+      <td><div style="font-family:var(--fd);font-weight:700">${v.modelo||'—'}</div><div style="font-size:0.65rem;color:var(--text-muted)">${v.ano||''} • ${v.cor||''}</div></td>
       <td>${c?.nome||'—'}</td>
-      <td style="font-family:var(--fm);font-size:0.78rem">${v.km ? Number(v.km).toLocaleString('pt-BR')+' km' : '—'}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="prepVeiculo('edit','${v.id}');abrirModal('modalVeiculo')" style="margin-right:4px">✏</button>
-        <button class="btn btn-danger btn-sm" onclick="deletarVeiculo('${v.id}')">🗑</button>
-      </td>
+      <td class="font-mono">${v.km||'0'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="prepVeiculo('edit','${v.id}');abrirModal('modalVeiculo')">Editar</button></td>
     </tr>`;
   }).join('');
 };
 
-window.prepVeiculo = function(mode='add', id=null) {
-  ['veicId','veicPlaca','veicModelo','veicAno','veicCor','veicKm','veicObs'].forEach(f=>_sv(f,''));
-  _sv('veicTipo','carro');
-  window.popularSelects && popularSelects();
+window.prepVeiculo = function(mode, id=null) {
+  const clSel = document.getElementById('veicCliente'); if(clSel) clSel.innerHTML = J.clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  
+  const campos = ['veicId','veicPlaca','veicModelo','veicAno','veicCor','veicKm'];
+  campos.forEach(f => window._sv && _sv(f,'')); _sv('veicTipo','carro');
+  
   if (mode==='edit' && id) {
-    const v = J.veiculos.find(x=>x.id===id); if (!v) return;
-    _sv('veicId',v.id); _sv('veicTipo',v.tipo||'carro');
-    _sv('veicDono',v.clienteId||''); _sv('veicPlaca',v.placa||'');
-    _sv('veicModelo',v.modelo||''); _sv('veicAno',v.ano||'');
-    _sv('veicCor',v.cor||''); _sv('veicKm',v.km||''); _sv('veicObs',v.obs||'');
+    const v = J.veiculos.find(x => x.id === id); if (!v) return;
+    _sv('veicId', v.id); _sv('veicPlaca', v.placa||''); _sv('veicTipo', v.tipo||'carro');
+    _sv('veicModelo', v.modelo||''); _sv('veicAno', v.ano||''); _sv('veicCor', v.cor||'');
+    _sv('veicKm', v.km||''); _sv('veicCliente', v.clienteId||'');
   }
 };
 
 window.salvarVeiculo = async function() {
-  if (!_v('veicPlaca')||!_v('veicModelo')) { window.toastWarn && toastWarn('⚠ Placa e modelo são obrigatórios'); return; }
-  const p = {
-    tenantId:J.tid, tipo:_v('veicTipo'), clienteId:_v('veicDono'),
-    placa:_v('veicPlaca').toUpperCase().replace(/[\s-]/g,''),
-    modelo:_v('veicModelo'), ano:_v('veicAno'), cor:_v('veicCor'),
-    km:_v('veicKm'), obs:_v('veicObs'), updatedAt:new Date().toISOString()
+  const id=_v('veicId'); const placa=_v('veicPlaca').toUpperCase(); const clienteId=_v('veicCliente');
+  if(!clienteId){ window.toastWarn&&toastWarn('Selecione um dono legal'); return; }
+
+  const payload = {
+    tenantId: J.tid, clienteId, placa,
+    tipo: _v('veicTipo'), modelo: _v('veicModelo'), ano: _v('veicAno'), cor: _v('veicCor'), km: _v('veicKm'),
+    updatedAt: new Date().toISOString()
   };
-  const id=_v('veicId');
-  if(id) await J.db.collection('veiculos').doc(id).update(p);
-  else { p.createdAt=new Date().toISOString(); await J.db.collection('veiculos').add(p); }
-  window.toastOk && toastOk('✓ Veículo salvo!'); window.fecharModal && fecharModal('modalVeiculo');
-  window.audit && audit('VEÍCULOS',`Salvou ${p.placa}`);
+
+  try {
+    if(id) { await J.db.collection('veiculos').doc(id).update(payload); window.toastOk&&toastOk('Veículo atualizado!'); window.audit&&audit('VEÍCULOS',`Editou ${placa}`); }
+    else   { payload.createdAt = new Date().toISOString(); await J.db.collection('veiculos').add(payload); window.toastOk&&toastOk('Veículo vinculado!'); window.audit&&audit('VEÍCULOS',`Vínculo criado ${placa}`); }
+    window.fecharModal && fecharModal('modalVeiculo');
+  } catch(e){ window.toastErr&&toastErr('Erro: '+e.message); }
 };
 
-window.deletarVeiculo = async function(id) {
-  const ok = await confirmar('Deletar este veículo?'); if (!ok) return;
-  await J.db.collection('veiculos').doc(id).delete();
-  window.toastOk && toastOk('✓ Veículo removido');
-};
 
-// ── ESTOQUE ────────────────────────────────────────────────
+// ── ESTOQUE E NF ───────────────────────────────────────────
 window.renderEstoque = function() {
   const tb = document.getElementById('tbEstoque'); if (!tb) return;
-  if (!J.estoque.length) { tb.innerHTML = tableEmpty(8,'📦','Nenhum item no estoque'); return; }
+  if (!J.estoque.length) { tb.innerHTML='<tr><td colspan="9" class="table-empty">Nenhum item cadastrado.</td></tr>'; return; }
+  
+  const vTotal = J.estoque.reduce((acc, x)=>acc + ((parseFloat(x.custo)||0) * (parseInt(x.qtd)||0)),0);
   tb.innerHTML = J.estoque.map(p => {
-    const crit  = (p.qtd||0) <= (p.min||0);
-    const marg  = p.custo>0 ? (((p.venda-p.custo)/p.custo)*100).toFixed(0) : 0;
-    return `<tr class="${crit?'row-critical':''}">
-      <td style="font-family:var(--fm);font-size:0.7rem;color:var(--text-muted)">${p.codigo||'—'}</td>
-      <td>
-        <div style="font-weight:600">${p.desc}</div>
-        <div style="font-size:0.65rem;color:var(--text-muted)">${p.und||'UN'}</div>
-      </td>
-      <td style="font-family:var(--fm)">${window.moeda?moeda(p.custo):p.custo}</td>
-      <td style="font-family:var(--fm);color:var(--success)">${window.moeda?moeda(p.venda):p.venda}</td>
-      <td style="font-family:var(--fm);font-size:0.72rem;color:${parseFloat(marg)>=20?'var(--success)':parseFloat(marg)>=0?'var(--warn)':'var(--danger)'}">${marg}%</td>
-      <td style="font-family:var(--fm);font-weight:700;color:${crit?'var(--danger)':'var(--text)'}">${p.qtd||0}</td>
-      <td style="font-family:var(--fm);color:var(--text-muted)">${p.min||0}</td>
-      <td>${crit?'<span class="badge badge-danger">CRÍTICO</span>':'<span class="badge badge-success">OK</span>'}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="prepPeca('edit','${p.id}');abrirModal('modalPeca')" style="margin-right:4px">✏</button>
-        <button class="btn btn-danger btn-sm" onclick="deletarPeca('${p.id}')">🗑</button>
-      </td>
+    const isCrit = (p.qtd||0) <= (p.min||0);
+    const isZerado = (p.qtd||0) <= 0;
+    const margem = p.venda > 0 ? (((p.venda - p.custo) / p.venda)*100).toFixed(1) : '0';
+    return `<tr class="${isCrit?'stock-critical':''}">
+      <td class="font-mono">${p.ref||p.id.slice(-5).toUpperCase()}</td>
+      <td><div style="font-family:var(--fd);font-weight:700">${p.desc}</div><div style="font-size:0.6rem;color:var(--text-muted)">Un: ${p.unidade||'UN'} | Forn: ${p.fornecedor||'—'}</div></td>
+      <td class="text-warn font-mono">${window.moeda?moeda(p.custo||0):p.custo}</td>
+      <td class="text-success font-mono" style="font-weight:700">${window.moeda?moeda(p.venda||0):p.venda}</td>
+      <td class="font-mono">${margem}%</td>
+      <td class="font-mono" style="font-size:1rem;color:${isZerado?'var(--danger)':'var(--brand)'};font-weight:700">${p.qtd||0}</td>
+      <td class="text-muted font-mono">${p.min||0}</td>
+      <td>${isZerado?'<span class="badge badge-danger">Sem Estoque</span>':(isCrit?'<span class="badge badge-warn">Comprar</span>':'<span class="badge badge-success">Regular</span>')}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="prepPeca('edit','${p.id}');abrirModal('modalPeca')">Editar</button></td>
     </tr>`;
   }).join('');
 };
 
-window.prepPeca = function(mode='add', id=null) {
-  ['pecaId','pecaCodigo','pecaDesc','pecaCusto','pecaVenda','pecaQtd','pecaMin'].forEach(f=>_sv(f,''));
-  _sv('pecaUnd','UN'); _st('pecaMargem','—');
+window.prepPeca = function(mode, id=null) {
+  const sel=document.getElementById('pecaForn'); if(sel) sel.innerHTML = '<option value="">Sem Fornecedor</option>'+J.fornecedores.map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('');
+  const cp=['pecaId','pecaRef','pecaDesc','pecaCusto','pecaVenda','pecaQtd','pecaMin']; cp.forEach(f=>window._sv&&_sv(f,'')); _sv('pecaUn','UN');
+  
   if (mode==='edit' && id) {
-    const p=J.estoque.find(x=>x.id===id); if(!p) return;
-    _sv('pecaId',p.id); _sv('pecaCodigo',p.codigo||''); _sv('pecaDesc',p.desc||'');
-    _sv('pecaCusto',p.custo||0); _sv('pecaVenda',p.venda||0);
-    _sv('pecaQtd',p.qtd||0); _sv('pecaMin',p.min||0); _sv('pecaUnd',p.und||'UN');
-    calcMargem();
+    const p = J.estoque.find(x => x.id === id); if (!p) return;
+    _sv('pecaId', p.id); _sv('pecaRef', p.ref||''); _sv('pecaDesc', p.desc||''); _sv('pecaUn', p.unidade||'UN');
+    _sv('pecaCusto', p.custo||0); _sv('pecaVenda', p.venda||0); _sv('pecaQtd', p.qtd||0); _sv('pecaMin', p.min||0); _sv('pecaForn', p.fornecedor||'');
   }
-};
-
-window.calcMargem = function() {
-  const c=parseFloat(_v('pecaCusto')||0), v=parseFloat(_v('pecaVenda')||0);
-  const el=document.getElementById('pecaMargem'); if (!el) return;
-  if(c>0&&v>0){ const m=((v-c)/c*100).toFixed(1); el.textContent=`${m}% margem`; el.style.color=parseFloat(m)>=0?'var(--success)':'var(--danger)'; }
-  else { el.textContent='—'; el.style.color='var(--text-muted)'; }
 };
 
 window.salvarPeca = async function() {
-  if (!_v('pecaDesc')) { window.toastWarn && toastWarn('⚠ Descrição é obrigatória'); return; }
-  const p = {
-    tenantId:J.tid, codigo:_v('pecaCodigo'), desc:_v('pecaDesc'),
-    custo:parseFloat(_v('pecaCusto')||0), venda:parseFloat(_v('pecaVenda')||0),
-    qtd:parseInt(_v('pecaQtd')||0), min:parseInt(_v('pecaMin')||0),
-    und:_v('pecaUnd'), updatedAt:new Date().toISOString()
+  const id=_v('pecaId'); const desc=_v('pecaDesc'); if(!desc){ window.toastWarn&&toastWarn('Descrição obrigatória'); return; }
+  const payload = {
+    tenantId: J.tid, desc, ref: _v('pecaRef')||desc.slice(0,3).toUpperCase()+Math.floor(Math.random()*999),
+    unidade: _v('pecaUn'), fornecedor: _v('pecaForn'),
+    custo: parseFloat(_v('pecaCusto')||0), venda: parseFloat(_v('pecaVenda')||0),
+    qtd: parseInt(_v('pecaQtd')||0), min: parseInt(_v('pecaMin')||0),
+    updatedAt: new Date().toISOString()
   };
-  const id=_v('pecaId');
-  if(id) await J.db.collection('estoqueItems').doc(id).update(p);
-  else { p.createdAt=new Date().toISOString(); await J.db.collection('estoqueItems').add(p); }
-  window.toastOk && toastOk('✓ Peça salva!'); window.fecharModal && fecharModal('modalPeca');
-  window.audit && audit('ESTOQUE',`Salvou ${p.desc}`);
+  try {
+    if(id){ await J.db.collection('estoqueItems').doc(id).update(payload); window.toastOk&&toastOk('Peça atualizada'); window.audit&&audit('ESTOQUE',`Editou ${desc}`); }
+    else  { payload.createdAt = new Date().toISOString(); await J.db.collection('estoqueItems').add(payload); window.toastOk&&toastOk('Peça catalogada'); }
+    window.fecharModal&&fecharModal('modalPeca');
+  } catch(e){ window.toastErr&&toastErr('Erro: '+e.message); }
 };
 
-window.deletarPeca = async function(id) {
-  const ok=await confirmar('Deletar esta peça do estoque?'); if(!ok) return;
-  await J.db.collection('estoqueItems').doc(id).delete();
-  window.toastOk && toastOk('✓ Peça removida');
+// ... Funções NF da aba Estoque
+window.prepNF = function() {
+  _sv('nfChave',''); _sv('nfXml',''); _sh('nfItemsPreview','');
+};
+window.salvarNF = function() {
+    window.toastInfo && toastInfo('Este protótipo foca na baixa inteligente manual/XML parse.');
+    window.fecharModal && fecharModal('modalNF');
 };
 
-// ── EQUIPE ─────────────────────────────────────────────────
-window.renderEquipe = function() {
-  const tb=document.getElementById('tbEquipe'); if (!tb) return;
-  if (!J.equipe.length) { tb.innerHTML=tableEmpty(5,'👷','Nenhum colaborador cadastrado'); return; }
-  tb.innerHTML = J.equipe.map(f => `<tr>
-    <td>
-      <div style="font-weight:600">${f.nome}</div>
-      <div style="font-family:var(--fm);font-size:0.65rem;color:var(--text-muted)">${f.wpp||''}</div>
-    </td>
-    <td><span class="badge badge-brand">${window.JARVIS_CONST && JARVIS_CONST.CARGOS[f.cargo]?JARVIS_CONST.CARGOS[f.cargo]:(f.cargo||'—')}</span></td>
-    <td style="font-family:var(--fm);font-size:0.72rem">${f.usuario||'—'}</td>
-    <td>
-      <span style="font-family:var(--fm);font-size:0.75rem;color:var(--success)">
-        MO: ${f.comissaoServico||f.comissao||0}%<br>Peça: ${f.comissaoPeca||0}%
-      </span>
-    </td>
-    <td style="white-space:nowrap">
-      <button class="btn btn-ghost btn-sm" onclick="prepFunc('edit','${f.id}');abrirModal('modalFunc')" style="margin-right:4px">✏</button>
-      <button class="btn btn-danger btn-sm" onclick="deletarFunc('${f.id}')">🗑</button>
-    </td>
-  </tr>`).join('');
-};
-
-window.prepFunc = function(mode='add', id=null) {
-  ['funcId','funcNome','funcWpp','funcComissaoServico','funcComissaoPeca','funcUser','funcPass'].forEach(f=>_sv(f,''));
-  _sv('funcCargo','mecanico');
-  if (mode==='edit' && id) {
-    const f=J.equipe.find(x=>x.id===id); if(!f) return;
-    _sv('funcId',f.id); _sv('funcNome',f.nome||''); _sv('funcWpp',f.wpp||'');
-    _sv('funcCargo',f.cargo||'mecanico');
-    _sv('funcComissaoServico',f.comissaoServico||f.comissao||0);
-    _sv('funcComissaoPeca',f.comissaoPeca||0);
-    _sv('funcUser',f.usuario||''); _sv('funcPass',f.senha||'');
-  }
-};
-
-window.salvarFunc = async function() {
-  if (!_v('funcNome')||!_v('funcUser')||!_v('funcPass')) { window.toastWarn && toastWarn('⚠ Nome, usuário e senha são obrigatórios'); return; }
-  const p = {
-    tenantId:J.tid, nome:_v('funcNome'), wpp:_v('funcWpp'), cargo:_v('funcCargo'),
-    comissaoServico:parseFloat(_v('funcComissaoServico')||0),
-    comissaoPeca:parseFloat(_v('funcComissaoPeca')||0),
-    usuario:_v('funcUser'), senha:_v('funcPass'),
-    updatedAt:new Date().toISOString()
-  };
-  const id=_v('funcId');
-  if(id) await J.db.collection('funcionarios').doc(id).update(p);
-  else { p.createdAt=new Date().toISOString(); await J.db.collection('funcionarios').add(p); }
-  window.toastOk && toastOk('✓ Colaborador salvo!'); window.fecharModal && fecharModal('modalFunc');
-  window.audit && audit('EQUIPE',`Salvou ${p.nome}`);
-};
-
-window.deletarFunc = async function(id) {
-  const ok=await confirmar('Remover este colaborador? O acesso será revogado.','Atenção'); if(!ok) return;
-  await J.db.collection('funcionarios').doc(id).delete();
-  window.toastOk && toastOk('✓ Colaborador removido');
-  window.audit && audit('EQUIPE',`Removeu colaborador ${id}`);
-};
-
-// ── COMISSÕES ──────────────────────────────────────────────
-window.calcComissoes = function() {
-  const box = document.getElementById('boxComissoes'); if (!box) return;
-  const comissoes = {};
-  J.equipe.forEach(f => { comissoes[f.id]={nome:f.nome,val:0}; });
-  J.financeiro.filter(f=>f.isComissao&&f.mecId&&f.status==='Pendente').forEach(f=>{
-    if (comissoes[f.mecId]) comissoes[f.mecId].val += f.valor||0;
-  });
-  const lista = Object.values(comissoes).filter(c=>c.val>0);
-  box.innerHTML = lista.length ? lista.map(c=>`
-    <div class="com-card">
-      <div><div class="com-nome">${c.nome}</div><div style="font-family:var(--fm);font-size:0.6rem;color:var(--text-muted)">A PAGAR</div></div>
-      <div class="com-val">${window.moeda?moeda(c.val):c.val}</div>
-    </div>`).join('') : '<div style="text-align:center;color:var(--text-muted);padding:24px;font-family:var(--fm);font-size:0.75rem">Sem comissões pendentes</div>';
-};
 
 // ── FORNECEDORES ───────────────────────────────────────────
 window.renderFornecedores = function() {
-  const tb=document.getElementById('tbFornec'); if(!tb) return;
-  if(!J.fornecedores.length){tb.innerHTML=tableEmpty(4,'🏭','Nenhum fornecedor');return;}
-  tb.innerHTML=J.fornecedores.map(f=>`<tr>
-    <td><div style="font-weight:600">${f.nome}</div></td>
-    <td style="font-size:0.78rem;color:var(--text-secondary)">${f.segmento||'—'}</td>
-    <td style="font-family:var(--fm);font-size:0.78rem">${f.wpp||'—'}</td>
-    <td style="white-space:nowrap">
-      ${f.wpp?`<button class="btn btn-success btn-sm" onclick="abrirWpp('${f.wpp}','')" style="margin-right:4px">💬</button>`:''}
-      <button class="btn btn-ghost btn-sm" onclick="prepFornec('edit','${f.id}');abrirModal('modalFornec')" style="margin-right:4px">✏</button>
-      <button class="btn btn-danger btn-sm" onclick="deletarFornec('${f.id}')">🗑</button>
-    </td>
+  const tb = document.getElementById('tbFornec'); if (!tb) return;
+  if (!J.fornecedores.length) { tb.innerHTML='<tr><td colspan="3" class="table-empty">Nenhum fornecedor cadastrado.</td></tr>'; return; }
+  tb.innerHTML = J.fornecedores.map(f => `<tr>
+    <td><div style="font-family:var(--fd);font-weight:700">${f.nome}</div><div style="font-size:0.6rem;color:var(--text-muted)">CNPJ: ${f.cnpj||'—'} | ${f.tel||'—'}</div></td>
+    <td><span class="badge badge-brand">${f.segmento||'Autopeças'}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="prepFornec('edit','${f.id}');abrirModal('modalFornec')">Detalhes</button></td>
   </tr>`).join('');
 };
 
-window.prepFornec = function(mode='add', id=null) {
-  ['fornecId','fornecNome','fornecSeg','fornecWpp','fornecEmail'].forEach(f=>_sv(f,''));
-  if (mode==='edit'&&id) {
-    const f=J.fornecedores.find(x=>x.id===id); if(!f) return;
-    _sv('fornecId',f.id); _sv('fornecNome',f.nome||''); _sv('fornecSeg',f.segmento||'');
-    _sv('fornecWpp',f.wpp||''); _sv('fornecEmail',f.email||'');
+window.prepFornec = function(mode, id=null) {
+  const cp=['fornId','fornNome','fornCnpj','fornTel','fornSeg']; cp.forEach(f=>window._sv&&_sv(f,''));
+  if (mode==='edit' && id) {
+    const f=J.fornecedores.find(x=>x.id===id); if(!f)return;
+    _sv('fornId',f.id); _sv('fornNome',f.nome||''); _sv('fornCnpj',f.cnpj||''); _sv('fornTel',f.tel||''); _sv('fornSeg',f.segmento||'');
   }
 };
 
 window.salvarFornec = async function() {
-  if (!_v('fornecNome')) { window.toastWarn && toastWarn('⚠ Nome é obrigatório'); return; }
-  const p={tenantId:J.tid,nome:_v('fornecNome'),segmento:_v('fornecSeg'),wpp:_v('fornecWpp'),email:_v('fornecEmail'),updatedAt:new Date().toISOString()};
-  const id=_v('fornecId');
-  if(id) await J.db.collection('fornecedores').doc(id).update(p);
-  else { p.createdAt=new Date().toISOString(); await J.db.collection('fornecedores').add(p); }
-  window.toastOk && toastOk('✓ Fornecedor salvo!'); window.fecharModal && fecharModal('modalFornec');
+  const id=_v('fornId'); const nome=_v('fornNome'); if(!nome) return;
+  const t={ tenantId:J.tid, nome, cnpj:_v('fornCnpj'), tel:_v('fornTel'), segmento:_v('fornSeg'), updatedAt:new Date().toISOString() };
+  try {
+    if(id){ await J.db.collection('fornecedores').doc(id).update(t); window.toastOk&&toastOk('Fornecedor salvo'); }
+    else  { t.createdAt=new Date().toISOString(); await J.db.collection('fornecedores').add(t); window.toastOk&&toastOk('Fornecedor criado'); }
+    window.fecharModal&&fecharModal('modalFornec');
+  } catch(e){}
 };
 
-window.deletarFornec = async function(id) {
-  const ok=await confirmar('Deletar este fornecedor?'); if(!ok) return;
-  await J.db.collection('fornecedores').doc(id).delete();
-  window.toastOk && toastOk('✓ Fornecedor removido');
-};
 
-// ── AGENDA ─────────────────────────────────────────────────
-window.renderAgenda = function() {
-  const tb=document.getElementById('tbAgenda'); if(!tb) return;
-  const lista=[...J.agendamentos].sort((a,b)=>a.data>b.data?1:-1);
-  if(!lista.length){tb.innerHTML=tableEmpty(7,'📅','Nenhum agendamento');return;}
-  const hoje=new Date().toISOString().split('T')[0];
-  tb.innerHTML=lista.map(a=>{
-    const c=J.clientes.find(x=>x.id===a.clienteId);
-    const v=J.veiculos.find(x=>x.id===a.veiculoId);
-    const m=J.equipe.find(x=>x.id===a.mecId);
-    const vencido=a.data<hoje&&a.status==='Agendado';
-    return `<tr style="${vencido?'background:rgba(255,59,59,0.04);':''}">
-      <td style="font-family:var(--fm)">${window.dtBr?dtBr(a.data):a.data} ${a.hora||''}</td>
-      <td>${c?.nome||'—'}</td>
-      <td><span class="placa">${v?.placa||'—'}</span></td>
-      <td>${a.servico||'—'}</td>
-      <td>${m?.nome||'—'}</td>
-      <td>${vencido?'<span class="badge badge-danger">VENCIDO</span>':'<span class="badge badge-brand">AGENDADO</span>'}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="prepAgenda('edit','${a.id}');abrirModal('modalAgenda')" style="margin-right:4px">✏</button>
-        <button class="btn btn-brand btn-sm" onclick="converterAgendaOS('${a.id}')" style="font-size:0.65rem;">→ O.S.</button>
-      </td>
-    </tr>`;
-  }).join('');
-};
-
-window.prepAgenda = function(mode='add', id=null) {
-  ['agdId','agdServico'].forEach(f=>_sv(f,''));
-  _sv('agdData',new Date().toISOString().split('T')[0]); _sv('agdHora','09:00');
-  window.popularSelects && popularSelects();
-  if(mode==='edit'&&id){
-    const a=J.agendamentos.find(x=>x.id===id); if(!a) return;
-    _sv('agdId',a.id); _sv('agdCliente',a.clienteId||'');
-    window.filtrarVeicsAgenda && filtrarVeicsAgenda();
-    setTimeout(()=>_sv('agdVeiculo',a.veiculoId||''),80);
-    _sv('agdData',a.data||''); _sv('agdHora',a.hora||'');
-    _sv('agdServico',a.servico||''); _sv('agdMec',a.mecId||'');
-  }
-};
-
-window.salvarAgenda = async function() {
-  if (!_v('agdCliente')||!_v('agdData')) { window.toastWarn && toastWarn('⚠ Cliente e data são obrigatórios'); return; }
-  const p={tenantId:J.tid,clienteId:_v('agdCliente'),veiculoId:_v('agdVeiculo'),data:_v('agdData'),hora:_v('agdHora'),servico:_v('agdServico'),mecId:_v('agdMec'),status:'Agendado',updatedAt:new Date().toISOString()};
-  const id=_v('agdId');
-  if(id) await J.db.collection('agendamentos').doc(id).update(p);
-  else { p.createdAt=new Date().toISOString(); await J.db.collection('agendamentos').add(p); }
-  window.toastOk && toastOk('✓ Agendamento salvo!'); window.fecharModal && fecharModal('modalAgenda');
-  window.audit && audit('AGENDA',`Agendou ${p.servico||'serviço'}`);
-};
-
-window.converterAgendaOS = async function(agdId) {
-  const a=J.agendamentos.find(x=>x.id===agdId); if(!a) return;
-  await J.db.collection('agendamentos').doc(agdId).update({status:'Convertido',updatedAt:new Date().toISOString()});
-  window.prepOS && prepOS('add');
-  setTimeout(()=>{
-    _sv('osCliente',a.clienteId||''); window.filtrarVeiculosOS && filtrarVeiculosOS();
-    setTimeout(()=>_sv('osVeiculo',a.veiculoId||''),80);
-    _sv('osDescricao',a.servico||''); _sv('osData',a.data||new Date().toISOString().split('T')[0]);
-    window.abrirModal && abrirModal('modalOS');
-  },80);
-};
-
-// ── AUDITORIA ──────────────────────────────────────────────
-window.renderAuditoria = function() {
-  const tb=document.getElementById('tbAuditoria'); if(!tb) return;
-  if(!J.auditoria.length){tb.innerHTML=tableEmpty(4,'🔒','Sem registros de auditoria');return;}
-  tb.innerHTML=J.auditoria.slice(0,200).map(a=>`<tr>
-    <td style="font-family:var(--fm);font-size:0.7rem;color:var(--text-muted)">${window.dtHrBr?dtHrBr(a.ts):a.ts}</td>
-    <td><span class="badge badge-brand">${a.modulo||'—'}</span></td>
-    <td style="font-family:var(--fm);color:var(--brand)">${a.usuario||'—'}</td>
-    <td>${a.acao||'—'}</td>
+// ── EQUIPE (RH) / COMISSÕES / SALÁRIOS ──────────────────────
+window.renderEquipe = function() {
+  const tb = document.getElementById('tbEquipe'); if (!tb) return;
+  if (!J.equipe.length) { tb.innerHTML='<tr><td colspan="5" class="table-empty">Nenhum funcionário na base.</td></tr>'; return; }
+  
+  tb.innerHTML = J.equipe.map(f => `<tr>
+    <td><div style="font-family:var(--fd);font-weight:700">${f.nome}</div></td>
+    <td><span class="badge badge-neutral">${f.cargo||'Mecânico'}</span></td>
+    <td class="font-mono text-muted">${f.login||'—'}</td>
+    <td class="font-mono">${f.comissaoServico||f.comissao||0}% M.O. <br> ${f.comissaoPeca||0}% Peças</td>
+    <td><button class="btn btn-outline btn-sm" onclick="prepFunc('edit','${f.id}');abrirModal('modalFunc')">Editar</button></td>
   </tr>`).join('');
 };
 
-// ── DASHBOARD ──────────────────────────────────────────────
-const STATUS_LEGADO = {
-  'Aguardando':'Triagem','patio':'Triagem','box':'Andamento',
-  'aprovacao':'Orcamento_Enviado','faturado':'Pronto','cancelado':'Cancelado',
-  'concluido':'Entregue','Concluido':'Entregue',
-  'Triagem':'Triagem','Orcamento':'Orcamento','Orcamento_Enviado':'Orcamento_Enviado',
-  'Aprovado':'Aprovado','Andamento':'Andamento','Pronto':'Pronto','Entregue':'Entregue','Cancelado':'Cancelado'
+window.prepFunc = function(mode, id=null) {
+  const cp=['funcId','funcNome','funcCargo','funcLogin','funcPin','funcComMao','funcComPec']; cp.forEach(f=>window._sv&&_sv(f,''));
+  if (mode==='edit' && id) {
+    const f=J.equipe.find(x=>x.id===id); if(!f)return;
+    _sv('funcId',f.id); _sv('funcNome',f.nome||''); _sv('funcCargo',f.cargo||'mecanico'); _sv('funcLogin',f.login||'');
+    _sv('funcPin',f.pin||''); _sv('funcComMao',f.comissaoServico||f.comissao||0); _sv('funcComPec',f.comissaoPeca||0);
+  } else {
+    _sv('funcPin',Math.floor(1000+Math.random()*9000));
+  }
 };
 
-window.renderDashboard = function() {
-  const agora=new Date(); const mes=agora.getMonth(); const ano=agora.getFullYear();
+window.salvarFunc = async function() {
+  const id=_v('funcId'); const nome=_v('funcNome'); if(!nome) return;
+  const p={ tenantId:J.tid, nome, cargo:_v('funcCargo'), login:_v('funcLogin').toLowerCase().trim(), pin:_v('funcPin'), 
+            comissaoServico:parseFloat(_v('funcComMao')||0), comissaoPeca:parseFloat(_v('funcComPec')||0), updatedAt:new Date().toISOString() };
+  try {
+    if(id){ await J.db.collection('equipe').doc(id).update(p); window.toastOk&&toastOk('Colaborador Salvo'); }
+    else  { p.createdAt=new Date().toISOString(); await J.db.collection('equipe').add(p); window.toastOk&&toastOk('Admitido com Sucesso'); }
+    window.fecharModal&&fecharModal('modalFunc');
+  } catch(e){}
+};
 
-  const fat=J.os.filter(o=>['Pronto','Entregue'].includes(STATUS_LEGADO[o.status]||o.status)&&o.updatedAt)
-    .reduce((acc,o)=>{ const d=new Date(o.updatedAt); return (d.getMonth()===mes&&d.getFullYear()===ano)?acc+(o.total||0):acc; },0);
+window.prepPgtoRH = function() {
+  const sel = document.getElementById('rhFunc'); if(sel) sel.innerHTML = '<option value="">Selecionar Func...</option>'+J.equipe.map(f=>`<option value="${f.id}">${f.nome} (${f.cargo})</option>`).join('');
+  _sv('rhValor',''); _sv('rhDesc',''); _sv('rhData',new Date().toISOString().split('T')[0]);
+};
 
-  const patio=J.os.filter(o=>!['Cancelado','Entregue'].includes(STATUS_LEGADO[o.status]||o.status||'')).length;
-  const stockCrit=J.estoque.filter(p=>(p.qtd||0)<=(p.min||0)).length;
-  const vencidos=J.financeiro.filter(f=>f.status==='Pendente'&&f.venc&&new Date(f.venc)<agora).length;
-
-  _st('kFat',   window.moeda?moeda(fat):fat);
-  _st('kPatio', patio.toString());
-  _st('kStock', stockCrit.toString());
-  _st('kVenc',  vencidos.toString());
-
-  const dashOS=document.getElementById('dashRecentOS');
-  if (dashOS) {
-    const recOS=[...J.os].sort((a,b)=>b.updatedAt>a.updatedAt?1:-1).slice(0,6);
-    dashOS.innerHTML = recOS.map(o=>{
-      const v=J.veiculos.find(x=>x.id===o.veiculoId)||{placa:o.placa};
-      const c=J.clientes.find(x=>x.id===o.clienteId)||{nome:o.cliente};
-      const st=STATUS_LEGADO[o.status]||o.status||'?';
-      return `<tr>
-        <td><span class="placa">${v?.placa||'—'}</span></td>
-        <td>${c?.nome||'—'}</td>
-        <td>${window.badgeStatus?badgeStatus(st):st}</td>
-        <td style="font-family:var(--fm);color:var(--success);font-weight:700">${window.moeda?moeda(o.total):o.total}</td>
-      </tr>`;
-    }).join('') || window.tableEmpty(4,'📋','Nenhuma O.S.');
-  }
-
-  const dashStock=document.getElementById('dashAlertStock');
-  if (dashStock) {
-    const criticos=J.estoque.filter(p=>(p.qtd||0)<=(p.min||0)).slice(0,6);
-    dashStock.innerHTML=criticos.map(p=>`<tr class="row-critical">
-      <td>${p.desc}</td>
-      <td style="font-family:var(--fm);color:var(--danger);font-weight:700">${p.qtd||0}</td>
-      <td style="font-family:var(--fm);color:var(--text-muted)">${p.min||0}</td>
-      <td><span class="badge badge-danger">CRÍTICO</span></td>
-    </tr>`).join('') || window.tableEmpty(4,'✓','Estoque OK');
-  }
+window.salvarPgtoRH = async function() {
+  const fId=_v('rhFunc'); const valor=parseFloat(_v('rhValor')); const desc=_v('rhDesc')||'Vale/Pgto RH';
+  if(!fId || isNaN(valor) || valor<=0){ window.toastWarn&&toastWarn('Informe funcionário e valor'); return; }
+  try {
+    await J.db.collection('financeiro').add({
+      tenantId: J.tid, tipo:'Saída', status:'Pago', desc, valor, pgto:'Dinheiro/PIX', venc:_v('rhData'), createdAt:new Date().toISOString()
+    });
+    window.toastOk&&toastOk('Pagamento RH Lançado no Caixa');
+    window.fecharModal&&fecharModal('modalPgtoRH');
+  } catch(e){}
 };
