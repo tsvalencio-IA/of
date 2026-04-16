@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="js/config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/responsive_fix.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -316,6 +317,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       CRM Chat
       <span class="nav-badge" id="chatBadge">0</span>
     </div>
+    <div class="nav-item" onclick="ir('chatEquipe',this)">
+      <svg viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/></svg>
+      Chat Equipe
+      <span class="nav-badge" id="chatEquipeBadge">0</span>
+    </div>
 
     <div class="nav-section-label">INTELIGÊNCIA</div>
     <div class="nav-item" onclick="ir('ia',this)">
@@ -569,11 +575,26 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
           <div class="chat-head" id="chatHead">Selecione um cliente</div>
           <div class="chat-msgs" id="chatMsgs"></div>
           <div class="chat-foot" id="chatFoot" style="display:none; gap:8px; align-items:center;">
-            <button class="btn-ghost" id="btnPTT" title="Gravar Áudio" style="padding:8px; border-radius:50%;"><svg style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path fill="currentColor" d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
+            <button class="btn-ghost" id="btnPTT_CRM" title="Gravar Áudio" onmousedown="window.startMic('CRM')" onmouseup="window.stopMic('CRM')" style="padding:8px; border-radius:50%;"><svg style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path fill="currentColor" d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
             <button class="btn-ghost" onclick="document.getElementById('chatFile').click()" title="Anexar Arquivo" style="padding:8px; border-radius:50%;"><svg style="width:18px;height:18px;"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.31 2.69 6 6 6s6-2.69 6-6V6h-1.5z"/></svg></button>
-            <input type="file" id="chatFile" style="display:none" onchange="enviarArquivoChat(this)">
+            <input type="file" id="chatFile" style="display:none" onchange="window.enviarArquivoChat(this)">
             <input class="j-input" id="chatInput" placeholder="Responder..." style="flex:1;">
-            <button class="btn-primary" onclick="enviarChat()">ENVIAR</button>
+            <button class="btn-primary" onclick="window.enviarChat()">ENVIAR</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="s-chat-equipe">
+      <div class="chat-layout">
+        <div class="chat-list" id="chatListaEquipe"></div>
+        <div class="chat-main">
+          <div class="chat-head" id="chatHeadEquipe">Selecione um funcionário</div>
+          <div class="chat-msgs" id="chatMsgsEquipe"></div>
+          <div class="chat-foot" id="chatFootEquipe" style="display:none; gap:8px; align-items:center;">
+            <button class="btn-ghost" id="btnPTT_Equipe" title="Gravar Áudio" onmousedown="window.startMic('Equipe')" onmouseup="window.stopMic('Equipe')" style="padding:8px; border-radius:50%;"><svg style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path fill="currentColor" d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
+            <input class="j-input" id="chatInputEquipeAdmin" placeholder="Mensagem para equipe..." style="flex:1;">
+            <button class="btn-primary" onclick="window.enviarMsgEquipeAdmin()">ENVIAR</button>
           </div>
         </div>
       </div>
@@ -1105,12 +1126,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if(typeof window.escutarOS === 'function') window.escutarOS(); 
   window.escutarClientes(); window.escutarVeiculos();
   window.escutarEstoque(); window.escutarFinanceiro(); window.escutarEquipe();
-  window.escutarFornecedores(); window.escutarMensagens(); window.escutarAgendamentos();
+  window.escutarFornecedores(); window.escutarMensagens(); window.escutarChatEquipe(); window.escutarAgendamentos();
   window.escutarAuditoria();
 });
 
-const sectionMap = { dashboard:'s-dashboard', agenda:'s-agenda', kanban:'s-kanban', clientes:'s-clientes', estoque:'s-estoque', financeiro:'s-financeiro', equipe:'s-equipe', chat:'s-chat', ia:'s-ia', auditoria:'s-auditoria' };
-const titleMap = { dashboard:'DASHBOARD', agenda:'AGENDA', kanban:'PÁTIO / O.S.', clientes:'CLIENTES & VEÍCULOS', estoque:'ESTOQUE / NF', financeiro:'FINANCEIRO / DRE', equipe:'EQUIPE & RH', chat:'CRM CHAT', ia:'thIAguinho IA', auditoria:'AUDITORIA' };
+const sectionMap = { dashboard:'s-dashboard', agenda:'s-agenda', kanban:'s-kanban', clientes:'s-clientes', estoque:'s-estoque', financeiro:'s-financeiro', equipe:'s-equipe', chat:'s-chat', chatEquipe:'s-chat-equipe', ia:'s-ia', auditoria:'s-auditoria' };
+const titleMap = { dashboard:'DASHBOARD', agenda:'AGENDA', kanban:'PÁTIO / O.S.', clientes:'CLIENTES & VEÍCULOS', estoque:'ESTOQUE / NF', financeiro:'FINANCEIRO / DRE', equipe:'EQUIPE & RH', chat:'CRM CHAT', chatEquipe:'CHAT DA EQUIPE', ia:'thIAguinho IA', auditoria:'AUDITORIA' };
 
 function ir(key, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1199,6 +1220,16 @@ window.escutarMensagens = function() {
     const badge = $('chatBadge');
     if(naoLidas>0){badge.style.display='block';badge.innerText=naoLidas;}else badge.style.display='none';
     if(J.chatAtivo) window.renderChatMsgs(J.chatAtivo);
+  });
+}
+window.escutarChatEquipe = function() {
+  db.collection('chat_equipe').where('tenantId','==',J.tid).onSnapshot(snap => {
+    J.chatEquipe = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    window.renderChatListaEquipe();
+    const nLidas = J.chatEquipe.filter(m=>m.sender==='equipe'&&!m.lidaAdmin).length;
+    const badge = $('chatEquipeBadge');
+    if(nLidas>0){badge.style.display='block';badge.innerText=nLidas;}else badge.style.display='none';
+    if(J.chatEquipeAtivo) window.renderChatMsgsEquipe(J.chatEquipeAtivo);
   });
 }
 window.escutarAgendamentos = function() {
@@ -1434,10 +1465,83 @@ window.enviarChat = async function(txt) {
 }
 document.getElementById('chatInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')window.enviarChat();});
 
-window.enviarArquivoChat = function(input) {
-  const file = input.files[0]; if(!file || !J.chatAtivo) return;
-  window.toast("Enviando arquivo: " + file.name);
-  window.enviarChat("📎 Arquivo: " + file.name);
+window.enviarArquivoChat = async function(input, isAudio = false) {
+  const file = input.files ? input.files[0] : input; if(!file || !J.chatAtivo) return;
+  window.toast(isAudio ? 'Enviando áudio...' : 'Enviando arquivo...', 'warn');
+  try {
+      const fd = new FormData(); fd.append('file', file); fd.append('upload_preset', J.cloudPreset);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${J.cloudName}/auto/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.secure_url) {
+          let htmlMsg = isAudio ? `<audio src="${data.secure_url}" controls style="max-width:200px;height:30px;"></audio>` : `<a href="${data.secure_url}" target="_blank" style="color:inherit">📎 ${file.name}</a>`;
+          if (data.resource_type === 'image') htmlMsg = `<img src="${data.secure_url}" style="max-width:180px;border-radius:4px;display:block;margin-bottom:5px;"><br>` + htmlMsg;
+          await db.collection('mensagens').add({ tenantId: J.tid, clienteId: J.chatAtivo, sender: 'admin', msg: htmlMsg, lidaAdmin: true, lidaCliente: false, ts: Date.now() });
+          window.toast('✓ Enviado com sucesso');
+      }
+  } catch (e) { window.toast('Erro ao enviar arquivo', 'err'); }
+  if(input.value) input.value = '';
+}
+
+let _mediaRecorder; let _audioChunks = [];
+window.startMic = async function(type) {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        _mediaRecorder = new MediaRecorder(stream); _audioChunks = [];
+        _mediaRecorder.ondataavailable = e => _audioChunks.push(e.data);
+        _mediaRecorder.start(); window.toast('Gravando áudio...', 'warn');
+        $(type === 'CRM' ? 'btnPTT_CRM' : 'btnPTT_Equipe').style.color = 'var(--danger)';
+    } catch (e) { window.toast('Erro ao acessar microfone', 'err'); }
+}
+window.stopMic = async function(type) {
+    if (!_mediaRecorder || _mediaRecorder.state === 'inactive') return;
+    _mediaRecorder.stop(); $(type === 'CRM' ? 'btnPTT_CRM' : 'btnPTT_Equipe').style.color = '';
+    _mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(_audioChunks, { type: 'audio/webm' });
+        const file = new File([audioBlob], "audio_admin.webm", { type: 'audio/webm' });
+        if(type === 'CRM') window.enviarArquivoChat(file, true);
+        else window.enviarMsgEquipeAdmin(null, file);
+    };
+}
+
+// CHAT EQUIPE ADMIN
+window.renderChatListaEquipe = function() {
+  if(!$('chatListaEquipe')) return;
+  $('chatListaEquipe').innerHTML = J.equipe.map(f=>{
+    const msgs=J.chatEquipe.filter(m=>(m.de===f.id || m.para===f.id)); 
+    const ultima=msgs[msgs.length-1]; 
+    const nLidas=msgs.filter(m=>m.sender==='equipe' && m.de===f.id && !m.lidaAdmin).length;
+    return `<div class="chat-item ${J.chatEquipeAtivo===f.id?'active':''}" onclick="window.abrirChatEquipe('${f.id}','${f.nome}')">
+      <div class="chat-item-name">${f.nome} ${nLidas>0?`<span class="chat-unread">${nLidas}</span>`:''}</div>
+      <div class="chat-item-last">${ultima?.msg||'Sem mensagens'}</div>
+    </div>`;
+  }).join('');
+}
+window.abrirChatEquipe = function(fid, nome) {
+  J.chatEquipeAtivo=fid; $('chatHeadEquipe').innerText='CHAT EQUIPE: '+nome.toUpperCase(); $('chatFootEquipe').style.display='flex'; window.renderChatMsgsEquipe(fid);
+  J.chatEquipe.filter(m=>m.de===fid && m.sender==='equipe' && !m.lidaAdmin).forEach(m=>{ db.collection('chat_equipe').doc(m.id).update({lidaAdmin:true}); });
+}
+window.renderChatMsgsEquipe = function(fid) {
+  const msgs=J.chatEquipe.filter(m=>(m.de===fid || m.para===fid));
+  if(!$('chatMsgsEquipe')) return;
+  $('chatMsgsEquipe').innerHTML=msgs.map(m=>`<div class="chat-msg ${m.sender==='admin'?'admin':'cliente'}">
+    <small style="display:block;opacity:0.6;margin-bottom:2px">${m.sender==='admin'?'Você':(J.equipe.find(f=>f.id===m.de)?.nome||'Equipe')}</small>
+    ${m.msg}
+    <div class="ts">${m.ts?new Date(m.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</div>
+  </div>`).join('');
+  $('chatMsgsEquipe').scrollTop=$('chatMsgsEquipe').scrollHeight;
+}
+window.enviarMsgEquipeAdmin = async function(txt, audioFile = null) {
+  let msg = txt || $v('chatInputEquipeAdmin');
+  if(audioFile) {
+    window.toast('Enviando áudio...', 'warn');
+    const fd = new FormData(); fd.append('file', audioFile); fd.append('upload_preset', J.cloudPreset);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${J.cloudName}/auto/upload`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if(data.secure_url) msg = `<audio src="${data.secure_url}" controls style="max-width:200px;height:30px;"></audio>`;
+  }
+  if (!msg || !J.chatEquipeAtivo) return;
+  await db.collection('chat_equipe').add({tenantId:J.tid, de:'admin', para:J.chatEquipeAtivo, sender:'admin', msg, lidaAdmin:true, lidaEquipe:false, ts:Date.now()});
+  $('chatInputEquipeAdmin').value='';
 }
 
 // AGENDA
