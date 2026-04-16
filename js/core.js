@@ -452,3 +452,115 @@ function _hexToRGB(hex) {
   const c = (hex||'#3B82F6').replace('#','');
   return `${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)}`;
 }
+// ── MOTOR DE MÍDIA DO CHAT (ÁUDIO E ARQUIVOS) ─────────────────
+let _mediaRecorder;
+let _audioChunks = [];
+
+window.togglePTT = async function() {
+  const btn = document.getElementById('btnPTT');
+  if (!btn) return;
+
+  // 1. Parar gravação e enviar
+  if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+    _mediaRecorder.stop();
+    btn.style.color = '';
+    btn.style.background = '';
+    btn.innerHTML = '🎤';
+    return;
+  }
+
+  // 2. Iniciar gravação com permissão
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _mediaRecorder = new MediaRecorder(stream);
+    _audioChunks = [];
+
+    _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _audioChunks.push(e.data); };
+    _mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(_audioChunks, { type: 'audio/webm' });
+      const fd = new FormData();
+      fd.append('file', audioBlob);
+      fd.append('upload_preset', J.cloudPreset);
+      
+      btn.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;border-color:var(--brand) transparent transparent transparent"></span>';
+      
+      try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${J.cloudName}/auto/upload`, {method:'POST',body:fd});
+        const data = await res.json();
+        
+        if (data.secure_url) {
+          const isEquipe = window.location.pathname.includes('equipe.html');
+          const inputEl = document.getElementById(isEquipe ? 'chatInputEquipe' : 'chatInput');
+          
+          if (inputEl) {
+            inputEl.value = `[AUDIO]${data.secure_url}`;
+            if (isEquipe && window.enviarMsgEquipe) window.enviarMsgEquipe();
+            else if (window.enviarChat) window.enviarChat();
+          }
+        }
+      } catch (e) {
+        window.toastErr && toastErr('Erro ao enviar áudio: ' + e.message);
+      } finally {
+        btn.innerHTML = '🎤';
+        stream.getTracks().forEach(t => t.stop());
+      }
+    };
+
+    _mediaRecorder.start();
+    btn.style.color = 'white';
+    btn.style.background = 'var(--danger)';
+    btn.innerHTML = '⏹️';
+    window.toastOk && toastOk('Gravando... Toque no ⏹️ para enviar.');
+
+  } catch (err) {
+    window.toastErr && toastErr('⚠ Permissão de microfone negada.');
+  }
+};
+
+window.enviarArquivoChat = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const isEquipe = window.location.pathname.includes('equipe.html');
+  const inputEl = document.getElementById(isEquipe ? 'chatInputEquipe' : 'chatInput');
+  if (!inputEl) return;
+
+  window.toastOk && toastOk('Enviando arquivo...');
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', J.cloudPreset);
+    
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${J.cloudName}/auto/upload`, {method:'POST',body:fd});
+    const data = await res.json();
+    
+    if (data.secure_url) {
+      const prefixo = data.resource_type === 'image' ? '[IMAGEM]' : '[ARQUIVO]';
+      inputEl.value = `${prefixo}${data.secure_url}`;
+      
+      if (isEquipe && window.enviarMsgEquipe) window.enviarMsgEquipe();
+      else if (window.enviarChat) window.enviarChat();
+    }
+  } catch(e) {
+    window.toastErr && toastErr('Erro no anexo: ' + e.message);
+  } finally {
+    input.value = '';
+  }
+};
+
+window.formatarMidiaChat = function(texto) {
+  if (!texto) return '';
+  if (texto.startsWith('[AUDIO]')) {
+    const url = texto.replace('[AUDIO]', '');
+    return `<audio src="${url}" controls style="height:34px; max-width:200px; outline:none;"></audio>`;
+  }
+  if (texto.startsWith('[IMAGEM]')) {
+    const url = texto.replace('[IMAGEM]', '');
+    return `<img src="${url}" style="max-width:200px; border-radius:4px; cursor:zoom-in" onclick="window.open('${url}')">`;
+  }
+  if (texto.startsWith('[ARQUIVO]')) {
+    const url = texto.replace('[ARQUIVO]', '');
+    return `<a href="${url}" target="_blank" style="color:var(--brand);text-decoration:underline">📎 Ver Anexo</a>`;
+  }
+  return texto;
+};
