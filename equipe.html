@@ -60,13 +60,13 @@
         </button>
       </div>
       <div class="kanban-wrap" id="kanbanBoard">
-        <div class="k-col" data-s="Triagem"><div class="k-col-head"><span class="k-col-label">TRIAGEM</span><span class="k-col-count" id="cnt-Triagem">0</span></div><div class="k-col-body" id="kb-Triagem"></div></div>
-        <div class="k-col" data-s="Orcamento"><div class="k-col-head"><span class="k-col-label">ORÇAMENTO</span><span class="k-col-count" id="cnt-Orcamento">0</span></div><div class="k-col-body" id="kb-Orcamento"></div></div>
-        <div class="k-col" data-s="Orcamento_Enviado"><div class="k-col-head"><span class="k-col-label">ORÇ. ENVIADO</span><span class="k-col-count" id="cnt-Orcamento_Enviado">0</span></div><div class="k-col-body" id="kb-Orcamento_Enviado"></div></div>
-        <div class="k-col" data-s="Aprovado"><div class="k-col-head"><span class="k-col-label">APROVADO</span><span class="k-col-count" id="cnt-Aprovado">0</span></div><div class="k-col-body" id="kb-Aprovado"></div></div>
-        <div class="k-col" data-s="Andamento"><div class="k-col-head"><span class="k-col-label">EM SERVIÇO</span><span class="k-col-count" id="cnt-Andamento">0</span></div><div class="k-col-body" id="kb-Andamento"></div></div>
-        <div class="k-col" data-s="Pronto"><div class="k-col-head"><span class="k-col-label">PRONTO</span><span class="k-col-count" id="cnt-Pronto">0</span></div><div class="k-col-body" id="kb-Pronto"></div></div>
-        <div class="k-col" data-s="Entregue"><div class="k-col-head"><span class="k-col-label">ENTREGUES</span><span class="k-col-count" id="cnt-Entregue">0</span></div><div class="k-col-body" id="kb-Entregue"></div></div>
+        <div class="k-col" data-s="Triagem" ondragover="window.allowDrop(event)" ondrop="window.drop(event)"><div class="k-col-head"><span class="k-col-label">TRIAGEM</span><span class="k-col-count" id="cnt-Triagem">0</span></div><div class="k-col-body" id="kb-Triagem"></div></div>
+        <div class="k-col" data-s="Orcamento" ondragover="window.allowDrop(event)" ondrop="window.drop(event)"><div class="k-col-head"><span class="k-col-label">ORÇAMENTO</span><span class="k-col-count" id="cnt-Orcamento">0</span></div><div class="k-col-body" id="kb-Orcamento"></div></div>
+        <div class="k-col" data-s="Orcamento_Enviado" ondragover="window.allowDrop(event)" ondrop="window.drop(event)"><div class="k-col-head"><span class="k-col-label">ORÇ. ENVIADO</span><span class="k-col-count" id="cnt-Orcamento_Enviado">0</span></div><div class="k-col-body" id="kb-Orcamento_Enviado"></div></div>
+        <div class="k-col" data-s="Aprovado" ondragover="window.allowDrop(event)" ondrop="window.drop(event)"><div class="k-col-head"><span class="k-col-label">APROVADO</span><span class="k-col-count" id="cnt-Aprovado">0</span></div><div class="k-col-body" id="kb-Aprovado"></div></div>
+        <div class="k-col" data-s="Andamento" ondragover="window.allowDrop(event)" ondrop="window.drop(event)"><div class="k-col-head"><span class="k-col-label">EM SERVIÇO</span><span class="k-col-count" id="cnt-Andamento">0</span></div><div class="k-col-body" id="kb-Andamento"></div></div>
+        <div class="k-col" data-s="Pronto" ondragover="window.allowDrop(event)" ondrop="window.drop(event)"><div class="k-col-head"><span class="k-col-label">PRONTO</span><span class="k-col-count" id="cnt-Pronto">0</span></div><div class="k-col-body" id="kb-Pronto"></div></div>
+        <div class="k-col" data-s="Entregue" ondragover="window.allowDrop(event)" ondrop="window.drop(event)"><div class="k-col-head"><span class="k-col-label">ENTREGUES</span><span class="k-col-count" id="cnt-Entregue">0</span></div><div class="k-col-body" id="kb-Entregue"></div></div>
       </div>
     </div>
 
@@ -75,11 +75,13 @@
       <div class="chat-main" style="height:calc(100vh - 130px);border:1px solid var(--border)">
         <div class="chat-head">💬 Chat com Admin / Gerente</div>
         <div class="chat-msgs" id="chatMsgs"></div>
-        <div class="chat-foot" style="display:flex">
+<div class="chat-foot" style="display:flex; gap: 8px; align-items: center;">
+          <button class="btn btn-ghost" id="btnPTT" onclick="window.togglePTT && window.togglePTT()" title="Gravar Áudio" style="padding:8px;border-radius:50%">🎤</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('chatFile').click()" title="Anexar" style="padding:8px;border-radius:50%">📎</button>
+          <input type="file" id="chatFile" style="display:none" accept="image/*,video/*,audio/*" onchange="window.enviarArquivoChat && window.enviarArquivoChat(this)">
           <input class="j-input" id="chatInputEquipe" placeholder="Mensagem para o admin..." style="flex:1">
           <button class="btn btn-brand" onclick="enviarMsgEquipe()">ENVIAR</button>
-        </div>
-      </div>
+        </div>      </div>
     </div>
 
     <!-- COMISSÕES -->
@@ -160,7 +162,7 @@
     <div style="background:var(--surf3);border:1px solid var(--border);padding:14px;margin-bottom:14px">
       <div style="font-family:var(--fd);font-weight:700;color:var(--brand);margin-bottom:10px">FOTOS E VÍDEOS (Cloudinary)</div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
-        <input type="file" class="j-input" id="osFileInput" accept="image/*,video/*" capture="environment" style="flex:1">
+<input type="file" class="j-input" id="osFileInput" accept="image/*,video/*" capture="environment" multiple style="flex:1">
         <button class="btn btn-brand btn-sm" onclick="uploadOsMedia()" id="btnUploadMedia">UPLOAD</button>
       </div>
       <div class="media-grid" id="osMediaGrid"></div>
