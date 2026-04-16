@@ -7,8 +7,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="js/config.js"></script>
-<link rel="stylesheet" href="css/design.css">
-<style>
+<script src="js/core.js"></script>
+<link rel="stylesheet" href="css/design.css"><style>
 body { background: var(--bg); }
 .cli-header { background: var(--surf); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
 .cli-content { max-width: 700px; margin: 0 auto; padding: 20px; }
@@ -71,32 +71,39 @@ body { background: var(--bg); }
 
   <div class="cli-content">
     <!-- Tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:-1px">
+<div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:-1px;overflow-x:auto;white-space:nowrap">
       <div class="mtab active" onclick="cliTab('os',this)" id="tabBtnOS">MINHAS O.S.</div>
       <div class="mtab" onclick="cliTab('historico',this)">HISTÓRICO</div>
-      <div class="mtab" onclick="cliTab('chat',this)" id="tabBtnChat">MENSAGENS <span id="cliChatBadge" style="display:none;background:var(--danger);color:#fff;font-family:var(--fm);font-size:.55rem;padding:2px 5px;border-radius:10px;margin-left:4px">0</span></div>
+      <div class="mtab" onclick="cliTab('financeiro',this)">FINANCEIRO</div>
+      <div class="mtab" onclick="cliTab('chat',this)" id="tabBtnChat">CHAT CRM <span id="cliChatBadge" style="display:none;background:var(--danger);color:#fff;font-family:var(--fm);font-size:.55rem;padding:2px 5px;border-radius:10px;margin-left:4px">0</span></div>
     </div>
 
-    <!-- OS ATIVAS -->
     <div id="cliTabOS">
       <div id="cliOSLista">
         <div class="empty-state"><div class="empty-state-icon">🔧</div><div class="empty-state-sub">Carregando...</div></div>
       </div>
     </div>
 
-    <!-- HISTÓRICO -->
     <div id="cliTabHistorico" style="display:none">
       <div id="cliHistoricoLista">
         <div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-sub">Carregando histórico...</div></div>
       </div>
     </div>
 
-    <!-- CHAT -->
+    <div id="cliTabFinanceiro" style="display:none">
+      <div id="cliFinanceiroLista">
+        <div class="empty-state"><div class="empty-state-icon">💸</div><div class="empty-state-sub">Carregando financeiro...</div></div>
+      </div>
+    </div>
+
     <div id="cliTabChat" style="display:none">
       <div class="chat-cli">
         <div class="chat-msg-list" id="cliChatMsgs"></div>
-        <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--surf2)">
-          <input class="j-input" id="cliChatInput" placeholder="Escreva sua mensagem..." style="flex:1">
+        <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--surf2);align-items:center;">
+          <button class="btn btn-ghost" id="btnPTT" onclick="window.togglePTT && window.togglePTT()" title="Gravar Áudio" style="padding:8px;border-radius:50%">🎤</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('chatFile').click()" title="Anexar" style="padding:8px;border-radius:50%">📎</button>
+          <input type="file" id="chatFile" style="display:none" accept="image/*,video/*,audio/*" onchange="window.enviarArquivoChat && window.enviarArquivoChat(this)">
+          <input class="j-input" id="cliChatInput" placeholder="Sua mensagem..." style="flex:1">
           <button class="btn btn-brand" onclick="cliEnviarMsg()">ENVIAR</button>
         </div>
       </div>
@@ -110,14 +117,14 @@ let _cliData = null;    // dados do cliente logado
 let _cliTid  = null;    // tenantId
 let _cliOSes = [];      // OS do cliente
 let _cliMsgs = [];      // mensagens do cliente
+let _cliFins = [];      // financeiro do cliente
 let _unsub   = [];      // unsubscribers
 
 const STATUS_ORDEM = ['Triagem','Orcamento','Orcamento_Enviado','Aprovado','Andamento','Pronto','Entregue'];
 const STATUS_LABELS = {
   'Triagem':'Triagem','Orcamento':'Orçamento','Orcamento_Enviado':'Orç. Enviado',
-  'Aprovado':'Aprovado','Andamento':'Em Serviço','Pronto':'Pronto!','Entregue':'Entregue'
+  'Aprovado':'Aprovado','Andamento':'Em Serviço','Pronto':'Aguardando Pagamento/Retirada','Entregue':'Finalizado'
 };
-
 function moeda(v) { return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(parseFloat(v)||0); }
 function dtBr(iso) { if(!iso) return '—'; try{return new Date(iso).toLocaleDateString('pt-BR');}catch{return iso;} }
 function dtHrBr(iso) { if(!iso) return '—'; try{return new Date(iso).toLocaleString('pt-BR');}catch{return iso;} }
@@ -232,9 +239,18 @@ function _iniciarListeners() {
       const badge=document.getElementById('cliChatBadge');
       if(badge){badge.style.display=naoLidas>0?'inline':'none';badge.textContent=naoLidas;}
     });
-  _unsub.push(unMsg);
-}
+_unsub.push(unMsg);
 
+  // Financeiro
+  const unFin = db.collection('financeiro')
+    .where('tenantId','==',_cliTid)
+    .where('clienteId','==',_cliData.id)
+    .onSnapshot(snap=>{
+      _cliFins = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt||'')>(a.createdAt||'')?1:-1);
+      _renderFinanceiro();
+    });
+  _unsub.push(unFin);
+}
 // ── RENDER OS ATIVAS ───────────────────────────────────────
 function _renderOS() {
   const ativas = _cliOSes.filter(o=>o.status!=='Entregue'&&o.status!=='Cancelado');
@@ -312,33 +328,73 @@ function _renderHistorico() {
   </div>`).join('');
 }
 
-// ── CHAT ───────────────────────────────────────────────────
+// ── FINANCEIRO ─────────────────────────────────────────────
+function _renderFinanceiro() {
+  const div = document.getElementById('cliFinanceiroLista');
+  if(!_cliFins.length) {
+    div.innerHTML='<div class="empty-state"><div class="empty-state-icon">💸</div><div class="empty-state-sub">Nenhum histórico financeiro.</div></div>';
+    return;
+  }
+  let totalAberto = 0;
+  const items = _cliFins.map(f => {
+    if (f.status === 'Pendente') totalAberto += (f.valor||0);
+    const cor = f.status === 'Pago' ? 'var(--success)' : 'var(--danger)';
+    return `<div style="background:var(--surf);border:1px solid var(--border);padding:14px;margin-bottom:10px;border-left:4px solid ${cor}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <div style="font-weight:700;font-family:var(--fm)">${f.desc||'Serviço Automotivo'}</div>
+        <div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:${cor}">${moeda(f.valor||0)}</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted)">
+        <div>Vencimento: ${dtBr(f.venc)}</div>
+        <div style="text-transform:uppercase;font-weight:700">${f.status}</div>
+      </div>
+    </div>`;
+  }).join('');
+  
+  div.innerHTML = `
+    <div style="background:var(--surf2);padding:16px;border:1px solid var(--border);margin-bottom:16px;text-align:center">
+      <div style="font-family:var(--fm);font-size:.7rem;color:var(--text-muted);letter-spacing:1px">TOTAL EM ABERTO</div>
+      <div style="font-family:var(--fd);font-size:2rem;font-weight:700;color:var(--danger)">${moeda(totalAberto)}</div>
+    </div>
+  ` + items;
+}
+
+// ── CHAT E MÍDIA ───────────────────────────────────────────
 function _renderChat() {
   const container=document.getElementById('cliChatMsgs'); if(!container) return;
   if(!_cliMsgs.length){container.innerHTML='<div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-sub">Sem mensagens ainda</div></div>';return;}
   container.innerHTML=_cliMsgs.map(m=>{
     const t=m.ts?new Date(m.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
     const dir=m.sender==='cliente'?'saida':'entrada';
-    return `<div class="msg-c ${dir}">${m.msg||''}${m.fileUrl?`<br><a href="${m.fileUrl}" target="_blank" style="color:var(--brand)">📎 Ver Arquivo</a>`:''}
+    
+    // MÁGICA DO ÁUDIO AQUI: Puxa do core.js
+    const msgHtml = window.formatarMidiaChat ? window.formatarMidiaChat(m.msg) : (m.msg||'');
+    
+    return `<div class="msg-c ${dir}">${msgHtml}
       <div class="msg-time">${t}</div></div>`;
   }).join('');
   container.scrollTop=container.scrollHeight;
+  
   // Marcar como lidas
   _cliMsgs.filter(m=>m.sender==='admin'&&!m.lidaCliente).forEach(m=>{
     db.collection('mensagens').doc(m.id).update({lidaCliente:true}).catch(()=>{});
   });
 }
 
-async function cliEnviarMsg() {
-  const msg=document.getElementById('cliChatInput').value.trim(); if(!msg) return;
+// Ligação global para o envio de arquivo do core.js
+window.enviarChat = async function() {
+  const inputEl = document.getElementById('cliChatInput');
+  const msg = inputEl.value.trim(); if(!msg) return;
   await db.collection('mensagens').add({tenantId:_cliTid,clienteId:_cliData.id,sender:'cliente',msg,lidaAdmin:false,lidaCliente:true,ts:Date.now()});
-  document.getElementById('cliChatInput').value='';
-}
+  inputEl.value='';
+};
+
+async function cliEnviarMsg() { await window.enviarChat(); }
 document.getElementById('cliChatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();cliEnviarMsg();}});
 
 // ── TABS ───────────────────────────────────────────────────
 function cliTab(key, el) {
-  const map={os:'cliTabOS',historico:'cliTabHistorico',chat:'cliTabChat'};
+  const map={os:'cliTabOS',historico:'cliTabHistorico',financeiro:'cliTabFinanceiro',chat:'cliTabChat'};
   Object.values(map).forEach(id=>{const d=document.getElementById(id);if(d)d.style.display='none';});
   const target=document.getElementById(map[key]); if(target) target.style.display='block';
   document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
