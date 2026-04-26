@@ -516,8 +516,8 @@ async function doLogin() {
     return;
   }
   try {
-    // Busca por login apenas (sem índice composto), filtra PIN e tipo no cliente
-    const snap = await db.collectionGroup('clientes').where('login', '==', login).get();
+    // Busca direto na coleção flat 'clientes' — sem collectionGroup, sem índice necessário
+    const snap = await db.collection('clientes').where('login', '==', login).get();
     if (snap.empty) {
       erro.textContent = '⚠ Login ou PIN incorretos.';
       erro.style.display = 'block';
