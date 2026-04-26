@@ -83,6 +83,24 @@ window.iaPerguntar = async function() {
 
   const infoOficina = `Oficina: ${window.J.tnome}. Mecânicos ativos: ${(window.J.equipe||[]).map(f=>f.nome).join(', ') || '—'}. Veículos cadastrados: ${(window.J.veiculos||[]).length}. Peças críticas (abaixo do mínimo): ${(window.J.estoque||[]).filter(p=>(p.qtd||0)<=(p.min||0)).map(p=>p.desc).join(', ') || 'nenhuma'}.`;
 
+  // ═══════════════════════════════════════════════════════════════
+  // INTEGRAÇÃO COM TABELA TEMPÁRIA (SINDIREPA-SP)
+  // Se a pergunta envolve tempo/cobrança/preço/orçamento, consulta a tabela.
+  // ═══════════════════════════════════════════════════════════════
+  let tempaContext = '';
+  const intencaoTempo = /quanto.*(tempo|hora|cobr|custa|cust|valor|preço|preco)|valor.*(servi|cobr)|tabela.*tempa|sindirepa|orçamento|orcamento|qual.*tempo|tempo.*pad|hora.*serv/i.test(msg);
+  if (intencaoTempo && typeof window.tempaConsultarParaIA === 'function') {
+    try {
+      const consulta = await window.tempaConsultarParaIA(msg);
+      if (consulta && consulta.itens.length > 0) {
+        tempaContext = `\n\n[TABELA TEMPÁRIA SINDIREPA-SP — RESULTADOS RELEVANTES PARA ESTA PERGUNTA (${consulta.total} itens)]\n${consulta.resumo}\n\n`;
+      }
+    } catch(e) {
+      // Falha silenciosa — IA continua sem dados da Tabela
+      console.warn('Tabela Tempária indisponível:', e);
+    }
+  }
+
   // 2. O PROMPT MESTRE (AUDITORIA E CONSULTORIA SÊNIOR — PADRÃO DOUTOR-IE / BOSCH PRO)
   const systemPrompt = `Você é o thIAguinho, o JARVIS Gestor Automotivo de alto nível.
 Seu conhecimento técnico é padrão Doutor-IE e Bosch Mecânico Pro. Seu conhecimento analítico é nível Diretor Operacional SaaS.
@@ -102,10 +120,16 @@ DIRETRIZES DE AUDITORIA (EXTREMAMENTE IMPORTANTE):
 7. CRUZAMENTO DE DADOS OBD2 E HISTÓRICO: Verifique os códigos de erro (DTC) que o cliente relatou via scanner e a timeline de alterações na O.S. Compare com as Peças e Serviços executados pelo mecânico. Alerte o gestor IMEDIATAMENTE se a oficina estiver trocando peças que não têm relação técnica com o código de falha do scanner ou se o mecânico modificou quantidades de forma suspeita.
 
 Cenário Atual da Oficina: ${infoOficina}
-
+${tempaContext}
 ${historyContext}
 
-Responda sempre em português do Brasil, de forma clínica, técnica e sem alucinar dados não existentes na base.`;
+Responda sempre em português do Brasil, de forma clínica, técnica e sem alucinar dados não existentes na base.
+
+REGRAS DA TABELA TEMPÁRIA SINDIREPA-SP:
+- Quando o gestor perguntar sobre tempo de serviço, cobrança ou orçamento, USE OS DADOS DA "TABELA TEMPÁRIA" ACIMA (se fornecidos).
+- A tabela contém os tempos PADRÃO em horas (ex: 0,5h = 30min, 1,5h = 1h30min).
+- O preço final é tempo × valor da hora-mecânica da oficina (você pode sugerir R$ 80-150/h como referência se a oficina não definiu).
+- NUNCA INVENTE TEMPOS — se a tabela não tem o item, diga "não consta na Tabela Tempária consultada" e sugira pesquisar manualmente.`;
 
   window.iaHistorico.push({role: 'user', text: msg});
 
@@ -116,7 +140,19 @@ Responda sempre em português do Brasil, de forma clínica, técnica e sem aluci
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
           contents, 
-          systemInstruction: {parts: [{text: systemPrompt}]}
+          systemInstruction: {parts: [{text: systemPrompt}]},
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048
+          },
+          // Safety settings permissivos (BLOCK_ONLY_HIGH) — termos técnicos automotivos
+          // não devem ser bloqueados (ex: "queima", "explosão de motor", etc.)
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
+          ]
       })
     });
 
@@ -130,7 +166,32 @@ Responda sempre em português do Brasil, de forma clínica, técnica e sem aluci
       throw new Error(errMsg + dica);
     }
 
-    const resp = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta';
+    // ═══ DIAGNÓSTICO ROBUSTO (mesmo padrão do equipe.html) ═══
+    if (!data.candidates || data.candidates.length === 0) {
+      const blockReason = data?.promptFeedback?.blockReason;
+      throw new Error(blockReason
+        ? `Pergunta bloqueada pela política de segurança (${blockReason}). Reformule sem termos sensíveis.`
+        : 'A IA não retornou candidatos de resposta. Tente reformular.');
+    }
+
+    const candidate = data.candidates[0];
+    const finishReason = candidate.finishReason;
+    let resp = candidate.content?.parts?.map(p => p.text).filter(Boolean).join('\n') || '';
+
+    if (!resp) {
+      if (finishReason === 'SAFETY' || finishReason === 'BLOCKED') {
+        const safetyRatings = candidate.safetyRatings || [];
+        const bloqueado = safetyRatings.filter(r => r.blocked).map(r => r.category).join(', ');
+        throw new Error(`Resposta bloqueada por filtro de segurança (${bloqueado || finishReason}). Reformule a pergunta de forma mais técnica.`);
+      } else if (finishReason === 'MAX_TOKENS') {
+        throw new Error('Resposta da IA ultrapassou o limite. Faça uma pergunta mais específica ou divida em partes.');
+      } else if (finishReason === 'RECITATION') {
+        throw new Error('IA bloqueou por suspeita de citação direta. Reformule com suas próprias palavras.');
+      } else {
+        throw new Error(`A IA terminou sem texto (motivo: ${finishReason || 'desconhecido'}). Tente novamente.`);
+      }
+    }
+
     window.iaHistorico.push({role: 'model', text: resp});
 
     const lastBotMsg = document.getElementById('iaMsgs').lastChild;

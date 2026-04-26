@@ -80,9 +80,17 @@ window.renderKanban = function() {
       const placaFmt = placaRaw === 'S/PLACA' ? 'S/PLACA' : esc(placaRaw);
       const descFmt = esc(os.desc || os.relato || 'Sem descrição inicial...').substring(0, 120);
 
+      // Botão de exclusão definitiva — visível apenas para admin/gestor/superadmin
+      const role = (sessionStorage.getItem('j_role') || '').toLowerCase();
+      const ehGestor = ['admin','gestor','gerente','superadmin'].includes(role);
+      const btnExcluir = ehGestor
+        ? `<button title="Excluir definitivamente esta O.S." onclick="event.stopPropagation();window.excluirOSDef('${os.id}')" style="background:transparent;border:1px solid var(--danger);color:var(--danger);font-family:var(--fm);font-size:0.6rem;padding:3px 7px;border-radius:3px;cursor:pointer;">🗑</button>`
+        : '';
+
       return `<div class="k-card" style="border-left-color:${cor}" onclick="window.prepOS('edit','${os.id}');abrirModal('modalOS')">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;gap:6px;">
             <div class="k-placa" style="color:${cor};margin:0;font-size:1rem;">${placaFmt}</div>
+            ${btnExcluir}
         </div>
         <div class="k-cliente" style="font-size:0.85rem;font-weight:700;color:var(--text);margin-bottom:2px;">${nomeCli}</div>
         <div class="k-desc" style="margin-bottom:8px;">${descFmt}</div>
@@ -222,6 +230,7 @@ window.prepOS = function(mode, id = null) {
   if ($('osTimelineData')) $('osTimelineData').value = '[]';
   if ($('osIdBadge')) $('osIdBadge').innerText = 'NOVA O.S.';
   if ($('btnGerarPDFOS')) $('btnGerarPDFOS').style.display = 'none'; 
+  if ($('btnExcluirOS')) $('btnExcluirOS').style.display = 'none';   // só aparece editando OS existente
   if ($('areaPgtoOS')) $('areaPgtoOS').style.display = 'none'; 
   if ($('btnEnviarWppOS')) $('btnEnviarWppOS').style.display = 'none';
   
@@ -318,6 +327,34 @@ window.prepOS = function(mode, id = null) {
     window.verificarStatusOS();
     
     if ($('btnGerarPDFOS')) $('btnGerarPDFOS').style.display = 'block';
+
+    // Botão de exclusão só aparece se for admin/gestor (e estiver editando OS existente)
+    if ($('btnExcluirOS')) {
+      const role = (sessionStorage.getItem('j_role') || '').toLowerCase();
+      const ehGestor = ['admin','gestor','gerente','superadmin'].includes(role);
+      $('btnExcluirOS').style.display = ehGestor ? 'block' : 'none';
+      $('btnExcluirOS').dataset.osId = id;
+    }
+
+    // Botão Exportar Orçamento PMSP — aparece SOMENTE se cliente é governamental
+    if ($('btnExportarPMSP')) {
+      const ehGov = typeof window._osClienteGovernamental === 'function' && window._osClienteGovernamental();
+      $('btnExportarPMSP').style.display = ehGov ? 'block' : 'none';
+      $('btnExportarPMSP').dataset.osId = id;
+    }
+  }
+};
+
+// Helper para o botão "EXCLUIR O.S." dentro do modal — pega o ID do dataset e chama excluirOSDef
+window._excluirOSDoModal = async function() {
+  const btn = document.getElementById('btnExcluirOS');
+  const id = btn?.dataset?.osId;
+  if (!id) return;
+  if (typeof window.excluirOSDef === 'function') {
+    const ok = await window.excluirOSDef(id);
+    if (ok && typeof window.fecharModal === 'function') {
+      window.fecharModal('modalOS');
+    }
   }
 };
 
@@ -346,9 +383,10 @@ window.renderItensOS = function() {
 
 window.adicionarServicoOS = function() {
   const sel = document.createElement('div');
-  sel.style.cssText = 'display:grid;grid-template-columns:1fr 100px 32px;gap:8px;align-items:center;margin-bottom:8px;';
+  sel.style.cssText = 'display:grid;grid-template-columns:1fr 70px 100px 32px;gap:8px;align-items:center;margin-bottom:8px;';
   sel.innerHTML = `
     <input type="text" class="j-input serv-desc" placeholder="Ex: Alinhamento, Troca de Freio..." oninput="window.calcOSTotal()">
+    <input type="text" class="j-input serv-tempo" placeholder="TMO h" title="Tempo de Mão de Obra (horas)" style="text-align:center;font-family:var(--fm);font-size:0.78rem;color:var(--warn);">
     <input type="number" class="j-input serv-valor" value="0" step="0.01" placeholder="R$ 0,00" oninput="window.calcOSTotal()">
     <button type="button" onclick="this.parentElement.remove();window.calcOSTotal()" style="background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.3);border-radius:2px;color:var(--danger);cursor:pointer;width:32px;height:32px;">✕</button>
   `;
@@ -357,9 +395,10 @@ window.adicionarServicoOS = function() {
 
 window.renderServicoOSRow = function(s) {
   const div = document.createElement('div');
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 100px 32px;gap:8px;align-items:center;margin-bottom:8px;';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 70px 100px 32px;gap:8px;align-items:center;margin-bottom:8px;';
   div.innerHTML = `
     <input type="text" class="j-input serv-desc" value="${s.desc || ''}" placeholder="Descrição do Serviço" oninput="window.calcOSTotal()">
+    <input type="text" class="j-input serv-tempo" value="${s.tempo || ''}" placeholder="TMO h" title="Tempo de Mão de Obra (horas)" style="text-align:center;font-family:var(--fm);font-size:0.78rem;color:var(--warn);">
     <input type="number" class="j-input serv-valor" value="${s.valor || 0}" step="0.01" placeholder="R$ 0,00" oninput="window.calcOSTotal()">
     <button type="button" onclick="this.parentElement.remove();window.calcOSTotal()" style="background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.3);border-radius:2px;color:var(--danger);cursor:pointer;width:32px;height:32px;">✕</button>
   `;
@@ -367,16 +406,32 @@ window.renderServicoOSRow = function(s) {
 };
 
 window.adicionarPecaOS = function() {
+  const ehGov = typeof window._osClienteGovernamental === 'function' && window._osClienteGovernamental();
   const sel = document.createElement('div');
-  sel.style.cssText = 'display:grid;grid-template-columns:1fr 80px 90px 90px 32px;gap:8px;align-items:center;';
-  const opts = '<option value="">Selecionar peça...</option>' + J.estoque.filter(p => (p.qtd || 0) > 0).map(p => `<option value="${p.id}" data-venda="${p.venda || 0}" data-desc="${p.desc || ''}">[${p.qtd}un] ${p.desc} — ${moeda(p.venda)}</option>`).join('');
-  sel.innerHTML = `
-    <select class="j-select peca-sel" onchange="window.selecionarPecaOS(this)">${opts}</select>
-    <input type="number" class="j-input peca-qtd" value="1" min="1" placeholder="Qtd" oninput="window.calcOSTotal()">
-    <input type="number" class="j-input peca-custo" value="0" step="0.01" placeholder="Custo" oninput="window.calcOSTotal()">
-    <input type="number" class="j-input peca-venda" value="0" step="0.01" placeholder="Venda" oninput="window.calcOSTotal()">
-    <button type="button" onclick="this.parentElement.remove();window.calcOSTotal()" style="background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.3);border-radius:2px;color:var(--danger);cursor:pointer;width:32px;height:32px;">✕</button>
-  `;
+
+  if (ehGov) {
+    // Cliente governamental — peça AVULSA (não usa estoque)
+    sel.style.cssText = 'display:grid;grid-template-columns:120px 1fr 60px 100px 32px;gap:8px;align-items:center;background:rgba(167,139,250,0.06);padding:8px;border-radius:3px;border:1px solid rgba(167,139,250,0.2);';
+    sel.dataset.pecaAvulsa = '1';
+    sel.innerHTML = `
+      <input type="text" class="j-input peca-codigo" placeholder="Código original" title="Código original do fabricante (ex: 5207381)" style="font-family:var(--fm);font-size:0.78rem;">
+      <input type="text" class="j-input peca-desc-livre" placeholder="Descrição da peça (ex: AMORTECEDOR DIANT. DIREITO)" oninput="window.calcOSTotal()">
+      <input type="number" class="j-input peca-qtd" value="1" min="1" placeholder="Qtd" oninput="window.calcOSTotal()">
+      <input type="number" class="j-input peca-venda" value="0" step="0.01" placeholder="Valor unit. registrado" oninput="window.calcOSTotal()" title="Valor unitário da ata de registro de preço">
+      <button type="button" onclick="this.parentElement.remove();window.calcOSTotal()" style="background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.3);border-radius:2px;color:var(--danger);cursor:pointer;width:32px;height:32px;">✕</button>
+    `;
+  } else {
+    // Cliente normal — usa estoque
+    sel.style.cssText = 'display:grid;grid-template-columns:1fr 80px 90px 90px 32px;gap:8px;align-items:center;';
+    const opts = '<option value="">Selecionar peça...</option>' + J.estoque.filter(p => (p.qtd || 0) > 0).map(p => `<option value="${p.id}" data-venda="${p.venda || 0}" data-desc="${p.desc || ''}">[${p.qtd}un] ${p.desc} — ${moeda(p.venda)}</option>`).join('');
+    sel.innerHTML = `
+      <select class="j-select peca-sel" onchange="window.selecionarPecaOS(this)">${opts}</select>
+      <input type="number" class="j-input peca-qtd" value="1" min="1" placeholder="Qtd" oninput="window.calcOSTotal()">
+      <input type="number" class="j-input peca-custo" value="0" step="0.01" placeholder="Custo" oninput="window.calcOSTotal()">
+      <input type="number" class="j-input peca-venda" value="0" step="0.01" placeholder="Venda" oninput="window.calcOSTotal()">
+      <button type="button" onclick="this.parentElement.remove();window.calcOSTotal()" style="background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.3);border-radius:2px;color:var(--danger);cursor:pointer;width:32px;height:32px;">✕</button>
+    `;
+  }
   if($('containerPecasOS')) $('containerPecasOS').appendChild(sel); window.calcOSTotal();
 };
 
@@ -453,21 +508,46 @@ window.salvarOS = async function() {
   document.querySelectorAll('#containerServicosOS > div').forEach(row => {
     const desc = row.querySelector('.serv-desc')?.value || '';
     const valor = parseFloat(row.querySelector('.serv-valor')?.value || 0);
-    if (desc || valor > 0) { servicos.push({ desc, valor }); totalMaoObra += valor; }
+    const tempoStr = row.querySelector('.serv-tempo')?.value || '';
+    const tempo = parseFloat(String(tempoStr).replace(',', '.')) || 0;
+    const codigoTabela = row.dataset?.codigoTabela || '';
+    const sistemaTabela = row.dataset?.sistemaTabela || '';
+    if (desc || valor > 0) { servicos.push({ desc, valor, tempo, codigoTabela, sistemaTabela }); totalMaoObra += valor; }
   });
 
   const pecas = [];
   let totalPecas = 0;
   document.querySelectorAll('#containerPecasOS > div').forEach(row => {
-    const sel = row.querySelector('.peca-sel'); 
+    // Peça AVULSA (cliente governo)
+    if (row.dataset?.pecaAvulsa === '1') {
+      const codigo = row.querySelector('.peca-codigo')?.value || '';
+      const descLivre = row.querySelector('.peca-desc-livre')?.value || '';
+      const qtd = parseFloat(row.querySelector('.peca-qtd')?.value || 1);
+      const venda = parseFloat(row.querySelector('.peca-venda')?.value || 0);
+      if (descLivre || codigo) {
+        totalPecas += (qtd * venda);
+        pecas.push({
+          avulsa: true,        // marcador
+          estoqueId: '',       // não baixa estoque
+          codigo: codigo,
+          desc: descLivre,
+          qtd: qtd,
+          custo: 0,
+          venda: venda
+        });
+      }
+      return;
+    }
+    // Peça normal (estoque)
+    const sel = row.querySelector('.peca-sel');
     const opt = sel?.options[sel.selectedIndex];
     const qtd = parseFloat(row.querySelector('.peca-qtd')?.value || 1);
     const venda = parseFloat(row.querySelector('.peca-venda')?.value || 0);
     const custo = parseFloat(row.querySelector('.peca-custo')?.value || 0);
     totalPecas += (qtd * venda);
-    
+
     pecas.push({
-      estoqueId: sel?.value, 
+      estoqueId: sel?.value,
       desc: opt?.dataset.desc || opt?.text || '',
       qtd: qtd, custo: custo, venda: venda
     });
@@ -842,8 +922,9 @@ window.salvarOS = async function() {
           });
         }
 
-        // Baixa de estoque (independente da forma de pagamento)
+        // Baixa de estoque (independente da forma de pagamento) — exceto peças avulsas (cliente governo)
         for (const p of pecas) {
+          if (p.avulsa) continue;  // peças avulsas NÃO baixam estoque
           if (p.estoqueId) {
             const item = J.estoque.find(x => x.id === p.estoqueId);
             if (item) await db.collection('estoqueItems').doc(p.estoqueId).update({ qtd: Math.max(0, (item.qtd || 0) - p.qtd) });

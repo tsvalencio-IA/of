@@ -19,7 +19,9 @@ const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 // Arquivos críticos que pré-carregamos na instalação
 const PRECACHE_URLS = [
   './',
+  './selecionar-perfil.html',
   './index.html',
+  './cliente.html',
   './manifest.json',
   './css/design.css',
   './js/core.js',
@@ -31,7 +33,8 @@ const PRECACHE_URLS = [
   './js/pdf.js',
   './js/config.js',
   './js/fiscal.js',
-  './elm327-service.js'
+  './elm327-service.js',
+  './elm-bridge.js'
 ];
 
 // ── INSTALL: pré-carrega arquivos críticos ──

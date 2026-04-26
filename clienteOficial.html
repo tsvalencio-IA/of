@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Portal Oficial — thIAguinho</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#A78BFA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="thIAguinho Oficial">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg-primary:    #0F1421;
+  --bg-card:       #1A2138;
+  --bg-card-2:     #232C47;
+  --border:        rgba(167, 139, 250, 0.15);
+  --border-strong: rgba(167, 139, 250, 0.4);
+  --gov:           #A78BFA;
+  --gov-dim:       rgba(167, 139, 250, 0.10);
+  --gov-glow:      rgba(167, 139, 250, 0.3);
+  --text:          #E8ECF4;
+  --text-muted:    #8B95B8;
+  --text-disabled: #4A5578;
+  --success:       #34D399;
+  --warn:          #FBBF24;
+  --danger:        #F87171;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 12px;
+  --ff-body: 'Inter', sans-serif;
+  --ff-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text);
+  font-family: var(--ff-body);
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-size: 14px;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* ═══ HEADER ═══ */
+.gov-header {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-card-2));
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.gov-shield {
+  width: 56px;
+  height: 56px;
+  background: var(--gov);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+.gov-info {
+  flex: 1;
+  min-width: 0;
+}
+.gov-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.gov-sub {
+  font-family: var(--ff-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+.gov-sair {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: var(--r-sm);
+  font-family: var(--ff-mono);
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gov-sair:hover { background: rgba(248,113,113,0.1); border-color: var(--danger); color: var(--danger); }
+
+/* ═══ STATS ═══ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+}
+.stat-label {
+  font-family: var(--ff-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.stat-val {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--gov);
+  font-family: var(--ff-mono);
+}
+.stat-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ═══ CARD ═══ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--gov);
+}
+
+/* ═══ TABS ═══ */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 10px 16px;
+  font-family: var(--ff-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.tab.active {
+  color: var(--gov);
+  border-bottom-color: var(--gov);
+}
+.tab:hover:not(.active) { color: var(--text); }
+.pane { display: none; }
+.pane.active { display: block; animation: fadeIn 0.25s; }
+@keyframes fadeIn { from {opacity:0;transform:translateY(4px);} to {opacity:1;transform:none;} }
+
+/* ═══ TABELA ═══ */
+.t {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.t th, .t td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.t th {
+  background: var(--bg-card-2);
+  color: var(--text-muted);
+  font-family: var(--ff-mono);
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.t tr:hover td { background: var(--gov-dim); }
+
+/* Pílulas de status */
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-family: var(--ff-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.pill-orcamento { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid rgba(251,191,36,0.4); }
+.pill-aprovado  { background: rgba(167,139,250,0.15); color: var(--gov); border: 1px solid rgba(167,139,250,0.4); }
+.pill-servico   { background: rgba(52,211,153,0.15); color: var(--success); border: 1px solid rgba(52,211,153,0.4); }
+.pill-pronto    { background: rgba(52,211,153,0.25); color: var(--success); border: 1px solid var(--success); }
+.pill-entregue  { background: rgba(139,149,184,0.15); color: var(--text-muted); border: 1px solid var(--text-disabled); }
+
+/* ═══ LOGIN ═══ */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.login-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+}
+.login-box h1 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.login-box .sub {
+  text-align: center;
+  font-family: var(--ff-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 24px;
+}
+.login-box label {
+  display: block;
+  font-family: var(--ff-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  margin-top: 14px;
+}
+.login-box input {
+  width: 100%;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: var(--ff-body);
+  font-size: 0.9rem;
+}
+.login-box input:focus { outline: none; border-color: var(--gov); }
+.login-box .btn-login {
+  width: 100%;
+  background: var(--gov);
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 14px;
+  color: #0F1421;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+.login-box .err {
+  background: rgba(248,113,113,0.1);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 10px;
+  border-radius: var(--r-sm);
+  font-size: 0.78rem;
+  margin-bottom: 14px;
+  display: none;
+}
+
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-family: var(--ff-mono);
+  font-size: 0.78rem;
+}
+
+/* ═══ DETALHE ORÇAMENTO ═══ */
+.os-detalhe {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 16px;
+  margin-top: 12px;
+}
+.detalhe-head {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.detalhe-row {
+  font-size: 0.78rem;
+}
+.detalhe-row .lbl {
+  font-family: var(--ff-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.detalhe-row .val { font-weight: 600; color: var(--text); }
+
+.totais {
+  background: rgba(167,139,250,0.06);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 14px;
+  margin-top: 12px;
+}
+.totais .lin {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.85rem;
+}
+.totais .lin.fim {
+  border-top: 1px solid var(--border-strong);
+  padding-top: 8px;
+  margin-top: 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gov);
+}
+
+.footer {
+  text-align: center;
+  padding: 20px 0;
+  color: var(--text-disabled);
+  font-family: var(--ff-mono);
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 600px) {
+  .gov-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .gov-titulo { font-size: 0.95rem; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-val { font-size: 1.1rem; }
+  .t { font-size: 0.72rem; }
+  .t th, .t td { padding: 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h1>🛡 Portal Oficial</h1>
+    <div class="sub">ÓRGÃO PÚBLICO · ACESSO RESTRITO</div>
+    <div class="err" id="loginErr"></div>
+    <label>Login do Órgão</label>
+    <input type="text" id="loginInput" placeholder="Ex: pmsp.30bpm" autocomplete="username">
+    <label>PIN de Acesso</label>
+    <input type="password" id="pinInput" placeholder="••••••" autocomplete="current-password">
+    <button class="btn-login" onclick="doLogin()">ACESSAR PORTAL</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+  <div class="container">
+    <div class="gov-header">
+      <div class="gov-shield">🛡</div>
+      <div class="gov-info">
+        <div class="gov-titulo" id="hdrUnidade">Carregando...</div>
+        <div class="gov-sub" id="hdrCnpj">—</div>
+      </div>
+      <button class="gov-sair" onclick="sair()">⏻ SAIR</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-label">VIATURAS ATIVAS</div>
+        <div class="stat-val" id="statVeic">—</div>
+        <div class="stat-meta">cadastradas no contrato</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">ORÇAMENTOS</div>
+        <div class="stat-val" id="statOrc">—</div>
+        <div class="stat-meta">em andamento</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">VALOR EXECUTADO</div>
+        <div class="stat-val" id="statValor">R$ 0</div>
+        <div class="stat-meta">total acumulado</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">VEÍCULOS PRONTOS</div>
+        <div class="stat-val" id="statPrt">—</div>
+        <div class="stat-meta">aguardando retirada</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="trocaTab('tab-orc',this)">📋 Orçamentos / OS</button>
+        <button class="tab" onclick="trocaTab('tab-viat',this)">🚓 Viaturas</button>
+        <button class="tab" onclick="trocaTab('tab-hist',this)">📜 Histórico Concluído</button>
+      </div>
+
+      <!-- ORÇAMENTOS / OS ATIVAS -->
+      <div class="pane active" id="tab-orc">
+        <div style="overflow-x:auto;">
+          <table class="t">
+            <thead><tr><th>OS</th><th>Viatura / Prefixo</th><th>Defeito</th><th>Status</th><th style="text-align:right;">Valor</th><th></th></tr></thead>
+            <tbody id="tbOrc"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+        <div id="osDetalheArea"></div>
+      </div>
+
+      <!-- VIATURAS -->
+      <div class="pane" id="tab-viat">
+        <div style="overflow-x:auto;">
+          <table class="t">
+            <thead><tr><th>Prefixo</th><th>Marca/Modelo</th><th>Placa</th><th>Patrimônio</th><th>KM</th></tr></thead>
+            <tbody id="tbViat"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO -->
+      <div class="pane" id="tab-hist">
+        <div style="overflow-x:auto;">
+          <table class="t">
+            <thead><tr><th>OS</th><th>Viatura</th><th>Data Conclusão</th><th style="text-align:right;">Valor</th></tr></thead>
+            <tbody id="tbHist"><tr><td colspan="4" class="empty">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">Powered by thIAguinho Soluções Digitais</div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/config.js"></script>
+<script>
+const db = window.initFirebase();
+let CLI = null;
+let TID = null;
+
+function moeda(v) {
+  return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(parseFloat(v||0));
+}
+function fmtData(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return '—'; }
+}
+
+const STATUS_LABELS = {
+  'Triagem': { txt: 'Em Triagem', cls: 'pill-orcamento' },
+  'Orcamento': { txt: 'Em Orçamento', cls: 'pill-orcamento' },
+  'Orcamento_Enviado': { txt: 'Aguardando Aprovação', cls: 'pill-orcamento' },
+  'Aprovado': { txt: 'Aprovado', cls: 'pill-aprovado' },
+  'Andamento': { txt: 'Em Execução', cls: 'pill-servico' },
+  'EmServico': { txt: 'Em Execução', cls: 'pill-servico' },
+  'Pronto': { txt: 'Pronto p/ Retirada', cls: 'pill-pronto' },
+  'Pronto_Retirada': { txt: 'Pronto p/ Retirada', cls: 'pill-pronto' },
+  'Concluido': { txt: 'Concluído', cls: 'pill-pronto' },
+  'Entregue': { txt: 'Entregue', cls: 'pill-entregue' }
+};
+
+async function doLogin() {
+  const erro = document.getElementById('loginErr');
+  erro.style.display = 'none';
+  const login = (document.getElementById('loginInput').value || '').trim();
+  const pin = (document.getElementById('pinInput').value || '').trim();
+  if (!login || !pin) {
+    erro.textContent = '⚠ Preencha login e PIN.';
+    erro.style.display = 'block';
+    return;
+  }
+  try {
+    const snap = await db.collectionGroup('clientes').where('login', '==', login).where('pin', '==', pin).get();
+    if (snap.empty) {
+      erro.textContent = '⚠ Login ou PIN incorretos.';
+      erro.style.display = 'block';
+      return;
+    }
+    const doc = snap.docs[0];
+    const data = doc.data();
+    if (data.tipoCliente !== 'governo') {
+      erro.textContent = '⚠ Acesso restrito a clientes governamentais. Use o portal cliente.html.';
+      erro.style.display = 'block';
+      return;
+    }
+    CLI = { id: doc.id, ...data };
+    TID = data.tenantId;
+    sessionStorage.setItem('govCli', JSON.stringify(CLI));
+    sessionStorage.setItem('govTid', TID);
+    inicializar();
+  } catch(e) {
+    erro.textContent = '⚠ Erro ao acessar: ' + e.message;
+    erro.style.display = 'block';
+  }
+}
+
+async function inicializar() {
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('hdrUnidade').textContent = (CLI.govUnidade || CLI.nome || '—').toUpperCase();
+  document.getElementById('hdrCnpj').textContent = `CNPJ: ${CLI.doc || '—'} · Fiscal: ${CLI.govFiscal || '—'}`;
+  await carregarDados();
+}
+
+async function carregarDados() {
+  // Veículos vinculados a este cliente
+  const sVeic = await db.collection('veiculos').where('tenantId', '==', TID).where('clienteId', '==', CLI.id).get();
+  const veiculos = sVeic.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // OS vinculadas
+  const sOS = await db.collection('ordens_servico').where('tenantId', '==', TID).where('clienteId', '==', CLI.id).get();
+  const ordens = sOS.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const ativas = ordens.filter(o => o.status !== 'Entregue' && o.status !== 'Concluido');
+  const concluidas = ordens.filter(o => o.status === 'Entregue' || o.status === 'Concluido')
+    .sort((a,b) => new Date(b.updatedAt||0) - new Date(a.updatedAt||0));
+
+  // Stats
+  document.getElementById('statVeic').textContent = veiculos.length;
+  document.getElementById('statOrc').textContent = ativas.length;
+  document.getElementById('statPrt').textContent = ativas.filter(o => /pronto/i.test(o.status||'')).length;
+  const valTotal = ordens.reduce((s, o) => s + (parseFloat(o.total)||0), 0);
+  document.getElementById('statValor').textContent = moeda(valTotal);
+
+  // Tabela orçamentos / OS ativas
+  const tbOrc = document.getElementById('tbOrc');
+  if (ativas.length === 0) {
+    tbOrc.innerHTML = '<tr><td colspan="6" class="empty">Sem orçamentos ativos no momento.</td></tr>';
+  } else {
+    tbOrc.innerHTML = ativas.map(o => {
+      const v = veiculos.find(x => x.id === o.veiculoId);
+      const stInfo = STATUS_LABELS[o.status] || { txt: o.status||'—', cls: 'pill-aprovado' };
+      const prefixo = (v?.prefixo || v?.placa || 'S/IDENT').toUpperCase();
+      return `<tr>
+        <td><strong>#${o.id.slice(-6).toUpperCase()}</strong></td>
+        <td><strong>${esc(prefixo)}</strong><br><small style="color:var(--text-muted);">${esc(v?.modelo||'')}</small></td>
+        <td style="font-size:0.75rem;">${esc((o.desc||o.relato||'').substring(0,60))}${(o.desc||o.relato||'').length>60?'...':''}</td>
+        <td><span class="pill ${stInfo.cls}">${stInfo.txt}</span></td>
+        <td style="text-align:right;font-family:var(--ff-mono);font-weight:600;">${moeda(o.total)}</td>
+        <td><button class="gov-sair" style="font-size:0.65rem;padding:5px 10px;" onclick='verDetalhe("${o.id}")'>VER</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Tabela viaturas
+  const tbV = document.getElementById('tbViat');
+  if (veiculos.length === 0) {
+    tbV.innerHTML = '<tr><td colspan="5" class="empty">Nenhuma viatura cadastrada.</td></tr>';
+  } else {
+    tbV.innerHTML = veiculos.map(v => `<tr>
+      <td><strong>${esc((v.prefixo||'').toUpperCase()) || '—'}</strong></td>
+      <td>${esc(v.marca||'')} ${esc(v.modelo||'')}<br><small style="color:var(--text-muted);">Ano ${esc(v.ano||'—')}</small></td>
+      <td><span style="font-family:var(--ff-mono);font-weight:600;">${esc((v.placa||'').toUpperCase())}</span></td>
+      <td style="font-family:var(--ff-mono);">${esc(v.patrimonio||'—')}</td>
+      <td style="font-family:var(--ff-mono);">${esc(v.km||'—')}</td>
+    </tr>`).join('');
+  }
+
+  // Tabela histórico
+  const tbH = document.getElementById('tbHist');
+  if (concluidas.length === 0) {
+    tbH.innerHTML = '<tr><td colspan="4" class="empty">Sem serviços concluídos.</td></tr>';
+  } else {
+    tbH.innerHTML = concluidas.slice(0, 50).map(o => {
+      const v = veiculos.find(x => x.id === o.veiculoId);
+      return `<tr>
+        <td><strong>#${o.id.slice(-6).toUpperCase()}</strong></td>
+        <td>${esc((v?.prefixo || v?.placa || '').toUpperCase())}<br><small style="color:var(--text-muted);">${esc(v?.modelo||'')}</small></td>
+        <td>${fmtData(o.updatedAt)}</td>
+        <td style="text-align:right;font-family:var(--ff-mono);font-weight:600;color:var(--success);">${moeda(o.total)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Cache pra detalhe
+  window.__os = ordens;
+  window.__veic = veiculos;
+}
+
+function trocaTab(id, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function verDetalhe(osId) {
+  const os = (window.__os || []).find(o => o.id === osId);
+  if (!os) return;
+  const v = (window.__veic || []).find(x => x.id === os.veiculoId);
+  const stInfo = STATUS_LABELS[os.status] || { txt: os.status||'—', cls: 'pill-aprovado' };
+
+  const valorHora = parseFloat(CLI.govValorHora || 0);
+  const descMO = parseFloat(CLI.govDescMO || 0);
+  const descPeca = parseFloat(CLI.govDescPeca || 0);
+
+  // Calcula totais
+  let totalMO = 0, totalTMO = 0, totalPecas = 0;
+  const linhasServ = (os.servicos || []).map(s => {
+    const tempo = parseFloat(s.tempo||0);
+    const valFinal = +(tempo * valorHora * (1 - descMO)).toFixed(2);
+    totalMO += valFinal;
+    totalTMO += tempo;
+    return `<tr>
+      <td>${esc(s.sistemaTabela||'-')}</td>
+      <td>${esc(s.desc||'-')}</td>
+      <td style="text-align:right;font-family:var(--ff-mono);">${tempo.toFixed(2).replace('.',',')}h</td>
+      <td style="text-align:right;font-family:var(--ff-mono);">${moeda(valorHora)}</td>
+      <td style="text-align:right;font-family:var(--ff-mono);color:var(--warn);">${(descMO*100).toFixed(0)}%</td>
+      <td style="text-align:right;font-family:var(--ff-mono);font-weight:700;color:var(--success);">${moeda(valFinal)}</td>
+    </tr>`;
+  }).join('');
+
+  const linhasPec = (os.pecas || []).map(p => {
+    const qtd = parseFloat(p.qtd||1);
+    const val = parseFloat(p.venda||0);
+    const valFinal = +(qtd * val * (1 - descPeca)).toFixed(2);
+    totalPecas += valFinal;
+    return `<tr>
+      <td style="font-family:var(--ff-mono);">${esc(p.codigo||'-')}</td>
+      <td>${esc(p.desc||'-')}</td>
+      <td style="text-align:center;">${qtd}</td>
+      <td style="text-align:right;font-family:var(--ff-mono);">${moeda(val)}</td>
+      <td style="text-align:right;font-family:var(--ff-mono);color:var(--warn);">${(descPeca*100).toFixed(0)}%</td>
+      <td style="text-align:right;font-family:var(--ff-mono);font-weight:700;color:var(--success);">${moeda(valFinal)}</td>
+    </tr>`;
+  }).join('');
+
+  const total = totalMO + totalPecas;
+
+  document.getElementById('osDetalheArea').innerHTML = `
+    <div class="os-detalhe">
+      <div class="detalhe-head">
+        <div class="detalhe-row"><div class="lbl">OS Nº</div><div class="val">#${os.id.slice(-6).toUpperCase()}</div></div>
+        <div class="detalhe-row"><div class="lbl">Status</div><div class="val"><span class="pill ${stInfo.cls}">${stInfo.txt}</span></div></div>
+        <div class="detalhe-row"><div class="lbl">Prefixo</div><div class="val">${esc((v?.prefixo||'').toUpperCase()) || '—'}</div></div>
+        <div class="detalhe-row"><div class="lbl">Placa</div><div class="val" style="font-family:var(--ff-mono);">${esc((v?.placa||'').toUpperCase())}</div></div>
+        <div class="detalhe-row"><div class="lbl">Veículo</div><div class="val">${esc(v?.marca||'')} ${esc(v?.modelo||'')}</div></div>
+        <div class="detalhe-row"><div class="lbl">KM</div><div class="val">${esc(os.km||v?.km||'—')}</div></div>
+      </div>
+
+      <h3 style="font-size:0.85rem;color:var(--gov);margin:14px 0 8px;letter-spacing:0.5px;">SERVIÇOS / MÃO DE OBRA</h3>
+      <div style="overflow-x:auto;">
+        <table class="t">
+          <thead><tr><th>Sistema</th><th>Descrição</th><th style="text-align:right;">TMO</th><th style="text-align:right;">Valor h</th><th style="text-align:right;">Desc</th><th style="text-align:right;">Total</th></tr></thead>
+          <tbody>${linhasServ || '<tr><td colspan="6" class="empty">Sem serviços.</td></tr>'}</tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size:0.85rem;color:var(--gov);margin:14px 0 8px;letter-spacing:0.5px;">PEÇAS</h3>
+      <div style="overflow-x:auto;">
+        <table class="t">
+          <thead><tr><th>Código</th><th>Descrição</th><th style="text-align:center;">Qtd</th><th style="text-align:right;">Vlr Unit</th><th style="text-align:right;">Desc</th><th style="text-align:right;">Total</th></tr></thead>
+          <tbody>${linhasPec || '<tr><td colspan="6" class="empty">Sem peças.</td></tr>'}</tbody>
+        </table>
+      </div>
+
+      <div class="totais">
+        <div class="lin"><span>Total Mão de Obra (${totalTMO.toFixed(2).replace('.',',')}h)</span><span style="font-family:var(--ff-mono);">${moeda(totalMO)}</span></div>
+        <div class="lin"><span>Total Peças</span><span style="font-family:var(--ff-mono);">${moeda(totalPecas)}</span></div>
+        <div class="lin fim"><span>VALOR DO CONTRATO</span><span style="font-family:var(--ff-mono);">${moeda(total)}</span></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('osDetalheArea').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[<>&"']/g, ch => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function sair() {
+  sessionStorage.removeItem('govCli');
+  sessionStorage.removeItem('govTid');
+  location.reload();
+}
+
+// Auto-login se houver sessão
+(function() {
+  const cached = sessionStorage.getItem('govCli');
+  if (cached) {
+    try {
+      CLI = JSON.parse(cached);
+      TID = sessionStorage.getItem('govTid');
+      inicializar();
+    } catch {}
+  }
+})();
+</script>
+</body>
+</html>

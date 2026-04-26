@@ -1,18 +1,18 @@
 {
-  "name": "thIAguinho — Portal do Cliente",
+  "name": "thIAguinho — Gestão Automotiva",
   "short_name": "thIAguinho",
-  "description": "Portal do cliente da oficina mecânica. Acompanhe sua O.S., agende, leia códigos OBD do seu carro.",
-  "start_url": "./cliente.html",
+  "description": "Sistema completo de gestão automotiva. Cliente, mecânico, gestor e administrador num só app.",
+  "start_url": "./selecionar-perfil.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0e1a",
+  "background_color": "#060A14",
   "theme_color": "#00D4FF",
   "lang": "pt-BR",
   "categories": ["productivity", "automotive", "business"],
   "icons": [
     {
-      "src": "https://api.dicebear.com/7.x/initials/svg?seed=tI&backgroundColor=00D4FF&textColor=000000",
+      "src": "https://api.dicebear.com/7.x/initials/svg?seed=T&backgroundColor=00D4FF&textColor=060A14",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -20,22 +20,16 @@
   ],
   "shortcuts": [
     {
-      "name": "Meu Veículo",
-      "short_name": "Veículo",
-      "url": "./cliente.html#tabMeu",
-      "description": "Ver dashboard do meu veículo"
+      "name": "Sou Cliente",
+      "short_name": "Cliente",
+      "url": "./cliente.html",
+      "description": "Acompanhar minha O.S., scanner OBD"
     },
     {
-      "name": "Chat com a Oficina",
-      "short_name": "Chat",
-      "url": "./cliente.html#tabChat",
-      "description": "Conversar com a oficina"
-    },
-    {
-      "name": "Scanner OBD",
-      "short_name": "OBD",
-      "url": "./cliente.html#tabOBD",
-      "description": "Conectar scanner OBD"
+      "name": "Sou Mecânico / Gestor",
+      "short_name": "Login",
+      "url": "./index.html",
+      "description": "Login para equipe e gestor da oficina"
     }
   ]
 }

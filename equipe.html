@@ -2,8 +2,22 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>J.A.R.V.I.S — Painel da Equipe</title>
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00D4FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JARVIS Mecânico">
+<meta name="mobile-web-app-capable" content="yes">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('service-worker.js').catch(function(){});
+  });
+}
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -431,11 +445,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         </select>
       </div>
       <div class="form-group"><label class="j-label">Status</label>
-        <select class="j-select" id="osStatus">
-          <option value="Aguardando">Triagem</option><option value="Orcamento">Orçamento</option>
-          <option value="Aprovado">Aprovado</option><option value="Andamento">Em Serviço</option>
-          <option value="Concluido">Concluído</option>
+        <select class="j-select" id="osStatus" onchange="window._validarStatusMecanico(this)">
+          <option value="Aguardando">Triagem</option>
+          <option value="Orcamento">Orçamento</option>
+          <option value="Aprovado">Aprovado</option>
+          <option value="Andamento">Em Serviço</option>
+          <option value="Pronto">✓ Pronto p/ Retirada (mecânico finaliza aqui)</option>
+          <option value="Entregue" data-restrito="gestor">🔒 Entregue (somente gestor/caixa)</option>
         </select>
+        <div id="osStatusAviso" style="font-family:var(--fm);font-size:0.6rem;color:var(--warn);margin-top:4px;display:none;letter-spacing:0.5px;"></div>
       </div>
     </div>
     <div class="form-row c2">
@@ -991,25 +1009,73 @@ ${historyContext}`;
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         contents,
-        systemInstruction: { parts: [{ text: systemPrompt }] }
-        // REMOVIDO: tools:[{google_search:{}}] (Para acabar com o erro "Sem Resposta")
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          // Configurações de safety mais permissivas para discussão técnica de oficina
+          // (ex: "queima de embreagem" pode ser detectada como linguagem violenta sem isso)
+        },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
+        ]
       })
     });
     
     const data = await res.json();
     
-    // Tratamento de Erro Real
+    // ═══ DIAGNÓSTICO ROBUSTO DA RESPOSTA (LOTE IA-EQUIPE) ═══
+    // A IA do Cliente sempre funciona porque trata todos os casos.
+    // A do Equipe falhava silenciosamente quando candidate vinha vazio.
     if (!res.ok) {
-       throw new Error(data?.error?.message || `Erro HTTP ${res.status} retornado pelo Google.`);
+      const errMsg = data?.error?.message || `HTTP ${res.status}`;
+      let dica = '';
+      if (/API key not valid|API_KEY_INVALID/i.test(errMsg)) {
+        dica = '<br><br><em>A chave Gemini é inválida. Peça ao gestor pra atualizar em <code>oficinas.apiKeys.gemini</code> no Firestore.</em>';
+      } else if (/quota|RESOURCE_EXHAUSTED/i.test(errMsg)) {
+        dica = '<br><br><em>Cota da API Gemini esgotada. Tente em alguns minutos ou peça ao gestor para atualizar a chave.</em>';
+      }
+      throw new Error(errMsg + dica);
     }
-    
-    const resp = data.candidates?.[0]?.content?.parts?.[0]?.text || 'A IA não retornou um texto válido.';
+
+    // Verifica se há candidatos
+    if (!data.candidates || data.candidates.length === 0) {
+      // Pode ser bloqueio na entrada (promptFeedback)
+      const blockReason = data?.promptFeedback?.blockReason;
+      if (blockReason) {
+        throw new Error(`A pergunta foi bloqueada pela política de segurança da IA (motivo: ${blockReason}). Reformule sem termos sensíveis.`);
+      }
+      throw new Error('A IA não retornou candidatos de resposta. Tente reformular.');
+    }
+
+    const candidate = data.candidates[0];
+    const finishReason = candidate.finishReason;
+    let resp = candidate.content?.parts?.map(p => p.text).filter(Boolean).join('\n') || '';
+
+    // Tratamento explícito por finishReason
+    if (!resp) {
+      if (finishReason === 'SAFETY' || finishReason === 'BLOCKED') {
+        const safetyRatings = candidate.safetyRatings || [];
+        const bloqueado = safetyRatings.filter(r => r.blocked).map(r => r.category).join(', ');
+        throw new Error(`A resposta foi bloqueada por filtro de segurança (${bloqueado || finishReason}). Reformule a pergunta de forma mais técnica.`);
+      } else if (finishReason === 'MAX_TOKENS') {
+        throw new Error('A resposta da IA ultrapassou o limite de tamanho. Faça uma pergunta mais específica.');
+      } else if (finishReason === 'RECITATION') {
+        throw new Error('A IA bloqueou a resposta por suspeita de citação direta. Reformule.');
+      } else {
+        throw new Error(`A IA terminou sem texto (motivo: ${finishReason || 'desconhecido'}). Tente novamente.`);
+      }
+    }
 
     _iaHist.push({ role: 'model', text: resp });
     _iaReplace(lid, resp.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--warn)">$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>'));
   } catch(e) {
     // Log de erro verdadeiro para o usuário não ficar no escuro
-    _iaReplace(lid, `⚠ <strong>Ocorreu um erro técnico na IA:</strong><br>${e.message}<br><br><em>Dica: Verifique se a sua chave de API não estourou o limite de uso diário.</em>`);
+    _iaReplace(lid, `⚠ <strong>Ocorreu um erro técnico na IA:</strong><br>${e.message}`);
+    console.error('[IA Equipe] Erro:', e);
   }
 }
 
@@ -1383,7 +1449,10 @@ function renderKanban(){
     'Aprovado':'Aprovado',
     'Andamento':'Andamento','box':'Andamento','EmServico':'Andamento','em_servico':'Andamento',
     'Pronto':'Pronto','pronto':'Pronto','faturado':'Pronto','Pronto_Retirada':'Pronto',
-    'Entregue':'Entregue','entregue':'Entregue','Concluido':'Entregue','concluido':'Entregue',
+    // Concluido legado vai pra PRONTO (era erroneamente Entregue).
+    // Só vai pra Entregue quando o GESTOR explicitamente marcar no caixa.
+    'Concluido':'Pronto','concluido':'Pronto',
+    'Entregue':'Entregue','entregue':'Entregue',
     'Aguardando':'Aguardando'
   };
 
@@ -1464,6 +1533,18 @@ function prepOS(mode,id=null){
   const bh = document.getElementById('bannerHistVeiculo'); if(bh) bh.style.display='none';
   limparPreviewOS(); _resetChkBtns();
   popularSelects();
+
+  // ═══ Esconde opção "Entregue" se quem abriu não for gestor/admin ═══
+  // Mecânico não deve nem ver essa opção. UX limpa.
+  const role = (J.role||'').toLowerCase();
+  const ehGestor = ['admin','gestor','gerente','superadmin'].includes(role);
+  const optEntregue = document.querySelector('#osStatus option[value="Entregue"]');
+  if (optEntregue) {
+    optEntregue.style.display = ehGestor ? '' : 'none';
+    optEntregue.disabled = !ehGestor;
+  }
+  const av = document.getElementById('osStatusAviso');
+  if (av) av.style.display = 'none';
   if(mode==='edit'&&id){
     const os=dbOS.find(x=>x.id===id); if(!os) return;
     $('osId').value=os.id; $('osIdBadge').innerText='OS#'+os.id.slice(-5).toUpperCase();
@@ -1692,11 +1773,52 @@ async function salvarOS(){
     chkCar:$('chkCar')?.value||'',chkDoc:$('chkDoc')?.value||'',
     timeline:tl,updatedAt:new Date().toISOString()
   };
-  
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANCA DE SEGURANÇA: mecânico/equipe NÃO pode salvar status=Entregue.
+  // Mesmo se alguém abrir o DevTools e mudar o select.value, esta tranca
+  // bloqueia. Só admin/gestor/gerente pode marcar Entregue (exige caixa).
+  // ═══════════════════════════════════════════════════════════════
+  if (p.status === 'Entregue' && !['admin','gestor','gerente','superadmin'].includes((J.role||'').toLowerCase())) {
+    toast('⚠ Apenas o gestor/caixa pode marcar uma O.S. como ENTREGUE. Mude para "Pronto p/ Retirada" e avise o caixa.', 'err');
+    if ($('osStatus')) $('osStatus').value = 'Pronto';
+    return;
+  }
+
   if(id) await db.collection('ordens_servico').doc(id).update(p);
   else{p.createdAt=new Date().toISOString();await db.collection('ordens_servico').add(p);}
+
+  // Avisa cliente via WhatsApp quando a O.S. acabou de virar PRONTO
+  if (p.status === 'Pronto' && id) {
+    const osAntes = dbOS.find(x => x.id === id);
+    if (osAntes && osAntes.status !== 'Pronto') {
+      setTimeout(() => _dispararWppPronto({...osAntes, ...p, id}), 400);
+    }
+  }
+
   toast('✓ O.S. SALVA'); fecharModal('modalOS');
 }
+
+// Validador do select de status — alerta o mecânico se ele tentar Entregue
+window._validarStatusMecanico = function(sel) {
+  const aviso = document.getElementById('osStatusAviso');
+  if (!aviso) return;
+  const role = (J.role||'').toLowerCase();
+  const ehGestor = ['admin','gestor','gerente','superadmin'].includes(role);
+
+  if (sel.value === 'Entregue' && !ehGestor) {
+    aviso.style.display = 'block';
+    aviso.style.color = 'var(--danger)';
+    aviso.textContent = '🔒 Você não tem permissão para marcar como Entregue. Use "Pronto p/ Retirada" e avise o caixa.';
+    sel.value = 'Pronto';
+  } else if (sel.value === 'Pronto') {
+    aviso.style.display = 'block';
+    aviso.style.color = 'var(--success)';
+    aviso.textContent = '✓ Ao salvar, o cliente será avisado via WhatsApp que o veículo está pronto para retirada.';
+  } else {
+    aviso.style.display = 'none';
+  }
+};
 
 function renderMediaGrid(){
   const media=JSON.parse($('mediaArray')?.value||'[]');

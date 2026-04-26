@@ -287,15 +287,102 @@ window.gerarPDFOS = async function() {
     doc.text('Assinatura do Cliente', ml + 32, sigY + 4, { align: 'center' });
     doc.text('Assinatura do Técnico', pw / 2 + 36, sigY + 4, { align: 'center' });
 
-    // ─── RODAPÉ ─────────────────────────────────────────────
-    doc.setFillColor(245, 247, 250);
-    doc.rect(0, ph - 18, pw, 18, 'F');
-    doc.setFontSize(7);
-    doc.setTextColor(140, 140, 140);
-    doc.text(brand.footer || `${J.tnome} · Powered by JARVIS ERP`, pw / 2, ph - 8, { align: 'center' });
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(bR, bG, bB);
-    doc.text(osNum, mr, ph - 8, { align: 'right' });
+    // ─── PÁGINA DE FOTOS / PROVAS DA O.S. (NOVO) ────────────────
+    // Se a OS tem fotos no Cloudinary, monta uma grade de miniaturas em página nova
+    const fotosOS = (os.media || os.fotos || []).filter(m => {
+      // Aceita strings (URLs) ou objetos {url, ...}
+      if (!m) return false;
+      const url = typeof m === 'string' ? m : (m.url || m.secure_url || '');
+      return url && /^https?:\/\//i.test(url);
+    }).map(m => typeof m === 'string' ? m : (m.url || m.secure_url));
+
+    if (fotosOS.length > 0) {
+      doc.addPage();
+      let yFotos = 18;
+      // Cabeçalho da página de fotos
+      doc.setFillColor(bR, bG, bB);
+      doc.rect(0, 0, pw, 14, 'F');
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('GALERIA DE PROVAS — ' + osNum, ml, 9);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${fotosOS.length} foto(s) registrada(s) durante o atendimento`, pw - mr, 9, { align: 'right' });
+
+      // Grid 2 colunas × N linhas; cada thumb 85×60mm
+      const cols = 2;
+      const thumbW = (pw - ml - mr - 8) / cols;  // 8mm gap
+      const thumbH = thumbW * 0.7;  // proporção 4:3 ish
+      yFotos = 22;
+
+      for (let i = 0; i < fotosOS.length; i++) {
+        const col = i % cols;
+        const x = ml + col * (thumbW + 8);
+
+        // Quebra de página se for estourar
+        if (yFotos + thumbH > ph - 20) {
+          doc.addPage();
+          yFotos = 18;
+        }
+
+        try {
+          // Carrega imagem do Cloudinary (com transformação para reduzir tamanho)
+          const url = fotosOS[i];
+          // Se for Cloudinary, aplica transformação para 600x450 jpg (mais leve)
+          let urlFinal = url;
+          if (url.includes('cloudinary.com') && url.includes('/upload/')) {
+            urlFinal = url.replace('/upload/', '/upload/w_600,h_450,c_fill,q_auto,f_jpg/');
+          }
+          const img = await _loadImage(urlFinal, 5000);  // timeout 5s
+          // Determina formato pela extensão
+          const fmt = /\.png/i.test(url) ? 'PNG' : 'JPEG';
+          doc.addImage(img, fmt, x, yFotos, thumbW, thumbH, undefined, 'FAST');
+          // Borda
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.2);
+          doc.rect(x, yFotos, thumbW, thumbH);
+          // Legenda
+          doc.setFontSize(6.5);
+          doc.setTextColor(120, 120, 120);
+          doc.text(`Foto ${i + 1}/${fotosOS.length}`, x + 1, yFotos + thumbH + 3);
+        } catch (e) {
+          // Falha ao carregar — desenha placeholder
+          doc.setFillColor(245, 245, 245);
+          doc.rect(x, yFotos, thumbW, thumbH, 'F');
+          doc.setFontSize(7);
+          doc.setTextColor(180, 180, 180);
+          doc.text('(imagem indisponível)', x + thumbW / 2, yFotos + thumbH / 2, { align: 'center' });
+          console.warn('Foto não carregou:', fotosOS[i]);
+        }
+
+        // Quando completa a linha, avança yFotos
+        if (col === cols - 1) yFotos += thumbH + 8;
+      }
+      // Volta para a última página da OS para não bagunçar o rodapé
+      doc.setPage(1);
+    }
+
+    // ─── RODAPÉ COM ASSINATURA thIAguinho ─────────────────────
+    // Aplica em TODAS as páginas (inclusive as de fotos)
+    const totalPaginas = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPaginas; p++) {
+      doc.setPage(p);
+      doc.setFillColor(245, 247, 250);
+      doc.rect(0, ph - 18, pw, 18, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(140, 140, 140);
+      const footerText = brand.footer || `${J.tnome}`;
+      doc.text(footerText, ml, ph - 12);
+      // Assinatura "Powered by thIAguinho" centralizada
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 100, 100);
+      doc.text('Powered by thIAguinho Soluções Digitais', pw / 2, ph - 8, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(bR, bG, bB);
+      doc.text(osNum + ' · pág ' + p + '/' + totalPaginas, mr, ph - 8, { align: 'right' });
+    }
+    doc.setPage(1);
 
     // ─── SALVAR ─────────────────────────────────────────────
     const fileName = `Laudo_${veiculo?.placa || 'OS'}_${new Date().getTime()}.pdf`;

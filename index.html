@@ -2,125 +2,359 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>JARVIS ERP - Hub de Acesso</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>JARVIS ERP — Acesso ao Sistema</title>
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00D4FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JARVIS">
+<meta name="mobile-web-app-capable" content="yes">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('service-worker.js').catch(function(){});
+  });
+}
+</script>
 <link rel="stylesheet" href="css/design.css">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <style>
-:root { --brand: #00D4FF; --brand-dim: rgba(0, 212, 255, 0.12); --surf-0: #060A14; --surf-1: #0C1426; --surf-2: #111D35; --border: rgba(0, 212, 255, 0.15); --text-primary: #E8F4FF; --text-muted: #7A9AB8; --ff-display: 'Rajdhani', sans-serif; --r-xl: 16px; }
-body { background: var(--surf-0); color: var(--text-primary); font-family: 'Exo 2', sans-serif; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-#hubView { width: 100%; max-width: 400px; text-align: center; padding: 20px; }
-.logo-mark { width: 80px; height: 80px; border-radius: var(--r-xl); background: linear-gradient(135deg, var(--brand-dim), transparent); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: var(--ff-display); font-size: 2.5rem; font-weight: 800; color: var(--brand); margin: 0 auto 16px; }
-.menu-grid { display: grid; gap: 16px; margin-top: 32px; }
-.nav-card { background: var(--surf-1); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 20px; text-decoration: none; color: white; display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden; cursor: pointer; text-align: left; }
-.nav-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--brand); opacity: 0.5; }
-#loginView { display: none; width: 100%; height: 100vh; position: fixed; inset: 0; background: var(--surf-0); z-index: 1000; align-items: center; justify-content: center; }
-.login-card { width: 100%; max-width: 360px; background: var(--surf-1); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 30px; }
-.input { width: 100%; padding: 12px 16px; background: var(--surf-2); border: 1px solid var(--border); border-radius: 8px; color: #fff; margin-bottom: 16px; outline: none; }
-.btn { width: 100%; padding: 14px; background: var(--brand); color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; text-transform: uppercase; }
-.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); margin-top: 10px; }
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+  animation: gridDrift 30s linear infinite;
+}
+@keyframes gridDrift { to { background-position: 48px 48px; } }
+
+.pwd-wrap { position: relative; }
+.pwd-wrap .input { padding-right: 42px; }
+.pwd-toggle {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 15px; padding: 4px;
+}
+.pwd-toggle:hover { color: var(--text-primary); }
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  margin-top: -4px;
+}
+.remember-row label {
+  font-family: var(--ff-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.remember-row input[type=checkbox] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.login-card .form-group:nth-child(1) { animation: slideUp 0.4s 0.1s both; }
+.login-card .form-group:nth-child(2) { animation: slideUp 0.4s 0.2s both; }
+.remember-row                        { animation: slideUp 0.4s 0.25s both; }
+.login-card .btn                     { animation: slideUp 0.4s 0.3s both; }
+@keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+
+#sessionIndicator {
+  display: none;
+  background: var(--success-dim);
+  border: 1px solid rgba(34,211,160,.3);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-family: var(--ff-mono);
+  font-size: 0.7rem;
+  color: var(--success);
+  text-align: center;
+  animation: slideUp 0.3s ease;
+}
 </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
-<div id="hubView">
-  <div class="logo-mark">J</div>
-  <h1 style="font-family:var(--ff-display); letter-spacing:2px;">JARVIS ERP</h1>
-  <div class="menu-grid">
-    <a href="cliente.html" class="nav-card">
-      <div style="font-size:1.8rem">🚘</div>
-      <div><div style="font-weight:700;">Portal do Cliente</div><div style="font-size:0.75rem;color:var(--text-muted);">Status e OBD</div></div>
-    </a>
-    <div onclick="abrirLogin('equipe')" class="nav-card">
-      <div style="font-size:1.8rem">🔧</div>
-      <div><div style="font-weight:700;">Operacional</div><div style="font-size:0.75rem;color:var(--text-muted);">Painel da Equipe</div></div>
+<div class="login-page" style="position:relative;z-index:1">
+  <div class="login-card" style="animation: modal-in 0.3s ease">
+
+    <div class="login-logo-wrap">
+      <div class="login-logo-mark brand-logo-mark sb-brand-mark">J</div>
+      <div class="login-title brand-name">JARVIS ERP</div>
+      <div class="login-sub brand-tagline">Gestão Automotiva Inteligente</div>
     </div>
-    <div onclick="abrirLogin('admin')" class="nav-card">
-      <div style="font-size:1.8rem">🖥️</div>
-      <div><div style="font-weight:700;">Administração</div><div style="font-size:0.75rem;color:var(--text-muted);">Gestão Oficina</div></div>
+
+    <div id="sessionIndicator">
+      ✓ Sessão salva — entrando automaticamente...
     </div>
-    <a href="superadmin.html" class="nav-card">
-      <div style="font-size:1.8rem">⚡</div>
-      <div><div style="font-weight:700;">Super Admin</div><div style="font-size:0.75rem;color:var(--text-muted);">Controle Master</div></div>
-    </a>
+
+    <div id="loginErr" class="login-err">Usuário ou senha incorretos.</div>
+
+    <div class="form-group">
+      <label class="form-label">E-mail ou Usuário</label>
+      <input
+        class="input input-mono"
+        id="usr"
+        type="text"
+        placeholder="seu.email@exemplo.com"
+        autocomplete="username"
+        spellcheck="false"
+        autocapitalize="off">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <div class="pwd-wrap">
+        <input
+          class="input"
+          id="pwd"
+          type="password"
+          placeholder="••••••••"
+          autocomplete="current-password">
+        <button class="pwd-toggle" type="button" onclick="_togglePwd()" id="pwdToggle" title="Ver senha">👁</button>
+      </div>
+    </div>
+
+    <div class="remember-row" style="align-items: flex-start; margin-top: 8px;">
+      <label>
+        <input type="checkbox" id="lgpdConsent">
+        <span style="line-height: 1.3;">Concordo com o tratamento de dados conforme a LGPD.</span>
+      </label>
+    </div>
+
+    <div class="remember-row" style="margin-bottom: 12px;">
+      <label>
+        <input type="checkbox" id="rememberMe"> Lembrar meu usuário e senha
+      </label>
+    </div>
+
+    <button class="btn btn-brand btn-xl btn-full" id="btnLogin" onclick="autenticar()" style="margin-top:8px">
+      Entrar no Sistema
+    </button>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="status-dot online"></div>
+      <span style="font-family:var(--ff-mono);font-size:0.62rem;color:var(--text-muted)">SISTEMA OPERACIONAL</span>
+    </div>
   </div>
-</div>
 
-<div id="loginView">
-  <div class="login-card">
-    <h2 id="loginLabel" style="text-align:center; margin-bottom:20px; font-family:var(--ff-display);">ACESSO</h2>
-    <div id="loginErr" style="color:#FF3B3B; font-size:0.8rem; margin-bottom:12px; display:none; text-align:center;"></div>
-    <input type="text" id="usr" class="input" placeholder="Usuário">
-    <input type="password" id="pwd" class="input" placeholder="Senha">
-    <button class="btn" id="btnEntrar" onclick="autenticar()">Entrar no Sistema</button>
-    <button class="btn btn-outline" onclick="fecharLogin()">Voltar</button>
+  <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;font-family:var(--ff-mono);font-size:0.6rem;color:var(--text-disabled)">
+    <span class="brand-footer">Powered by thIAguinho Soluções · 2026</span>
   </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="js/config.js"></script>
-
 <script>
+sessionStorage.clear();
+
 const db = window.initFirebase();
-let modo = '';
 
-function abrirLogin(m) {
-  modo = m;
-  document.getElementById('loginLabel').innerText = m === 'admin' ? 'ACESSO GESTOR' : 'ACESSO EQUIPE';
-  document.getElementById('hubView').style.display = 'none';
-  document.getElementById('loginView').style.display = 'flex';
+window.addEventListener('load', () => {
+  try {
+    const brand = JSON.parse(localStorage.getItem('j_saved_brand') || 'null');
+    if (brand) window.aplicarBrand(brand);
+  } catch(e) {}
+});
+
+(function carregarCredenciais() {
+  const saved = JSON.parse(localStorage.getItem('j_saved_login') || 'null');
+  if (saved) {
+    document.getElementById('usr').value = saved.usr || '';
+    document.getElementById('pwd').value = saved.pwd || '';
+    document.getElementById('rememberMe').checked = true;
+    document.getElementById('lgpdConsent').checked = true;
+
+    if (saved.destino && saved.tid) {
+      const indicator = document.getElementById('sessionIndicator');
+      indicator.style.display = 'block';
+
+      Object.entries(saved.session || {}).forEach(([k, v]) => {
+        sessionStorage.setItem(k, v);
+      });
+
+      setTimeout(() => {
+        window.location.href = saved.destino;
+      }, 1200);
+    }
+  }
+})();
+
+function _togglePwd() {
+  const p = document.getElementById('pwd');
+  const btn = document.getElementById('pwdToggle');
+  if (p.type === 'password') { p.type = 'text'; btn.textContent = '🙈'; }
+  else { p.type = 'password'; btn.textContent = '👁'; }
 }
 
-function fecharLogin() {
-  document.getElementById('hubView').style.display = 'block';
-  document.getElementById('loginView').style.display = 'none';
-}
+document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') autenticar(); });
+document.getElementById('usr').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pwd').focus(); });
 
 async function autenticar() {
-  const u = document.getElementById('usr').value.trim();
-  const p = document.getElementById('pwd').value.trim();
-  const btn = document.getElementById('btnEntrar');
-  if(!u || !p) return;
-  
-  btn.disabled = true; btn.innerText = 'Validando...';
+  const usr = document.getElementById('usr').value.trim();
+  const pwd = document.getElementById('pwd').value.trim();
+  const lgpdConsent = document.getElementById('lgpdConsent').checked;
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
+
+  if (!lgpdConsent) {
+    err.textContent = 'Aceite a LGPD para acessar.';
+    err.style.display = 'block';
+    return;
+  }
+
+  if (!usr || !pwd) {
+    err.textContent = 'Preencha usuário e senha.';
+    err.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('btnLogin');
+  btn.innerHTML = '<div class="spinner"></div> Autenticando...';
+  btn.disabled = true;
 
   try {
-    const col = modo === 'admin' ? 'oficinas' : 'funcionarios';
-    const snap = await db.collection(col).where('usuario', '==', u).get();
-    
-    if (snap.empty) throw new Error('Usuário não encontrado.');
-    const doc = snap.docs[0]; const d = doc.data();
-    if (d.senha !== p) throw new Error('Senha incorreta.');
+    // ── CAMADA 0: SUPERADMIN VIA FIREBASE AUTH ──
+    if(usr.includes('@')) {
+        try {
+            await firebase.auth().signInWithEmailAndPassword(usr, pwd);
+            sessionStorage.setItem('j_tid', 'MASTER_ADMIN');
+            sessionStorage.setItem('j_role', 'superadmin');
+            sessionStorage.setItem('j_nome', usr);
+            localStorage.setItem('j_role_master', 'superadmin'); 
+            
+            window.location.href = 'superadmin.html';
+            return;
+        } catch(authErr) {
+            console.log("Não autenticado no Auth principal, verificando coleções de oficinas...");
+        }
+    }
 
-    const tid = modo === 'admin' ? doc.id : d.tenantId;
-    const ofiSnap = await db.collection('oficinas').doc(tid).get();
-    const ofi = ofiSnap.data();
+    // ── CAMADA 1: Admin/Gestor da oficina → jarvis.html ──
+    const snapOf = await db.collection('oficinas').where('usuario', '==', usr).get();
+    if (!snapOf.empty) {
+      const doc = snapOf.docs[0];
+      const d   = doc.data();
 
-    const sessao = {
-      j_tid: tid, j_role: modo === 'admin' ? 'admin' : (d.cargo || 'mecanico'),
-      j_nome: modo === 'admin' ? ofi.nomeFantasia : d.nome,
-      j_tnome: ofi.nomeFantasia, j_nicho: ofi.nicho || 'carros',
-      j_cloud_name: ofi.apiKeys?.cloudName || 'dmuvm1o6m',
-      j_cloud_preset: ofi.apiKeys?.cloudPreset || 'evolution'
-    };
+      if (d.senha !== pwd) throw new Error('Senha incorreta.');
+      if (d.status === 'Bloqueado') throw new Error('Licença bloqueada. Contate o suporte.');
 
-    const brand = {
-      name: ofi.brandName || ofi.nomeFantasia, color: ofi.brandColor || '#00D4FF',
-      logoLetter: ofi.brandLetter || (ofi.nomeFantasia || 'J').charAt(0).toUpperCase()
-    };
-    sessao.j_brand = JSON.stringify(brand);
+      const sessao = {
+        j_tid:          doc.id,
+        j_tnome:        d.nomeFantasia || 'Oficina',
+        j_role:         'admin',
+        j_nome:         d.nomeFantasia || 'Gestor',
+        j_gemini:       d.apiKeys?.gemini      || '',
+        j_nicho:        d.nicho                || 'carros',
+        j_cloud_name:   d.apiKeys?.cloudName   || 'dmuvm1o6m',
+        j_cloud_preset: d.apiKeys?.cloudPreset || 'evolution',
+      };
 
-    Object.entries(sessao).forEach(([k, v]) => sessionStorage.setItem(k, v));
-    localStorage.setItem('j_saved_login', JSON.stringify({ usr: u, pwd: p, destino: modo === 'admin' ? 'jarvis.html' : 'equipe.html', session: sessao }));
+      const brand = {
+        name:       d.brandName    || d.nomeFantasia,
+        tagline:    d.brandTagline || 'Gestão Automotiva',
+        logoLetter: d.brandLetter  || (d.nomeFantasia || 'J').charAt(0).toUpperCase(),
+        color:      d.brandColor   || '#3B82F6',
+        footer:     d.brandFooter  || `${d.nomeFantasia} · Powered by JARVIS ERP`
+      };
+      brand.colorDim  = _hexDim(brand.color, 0.12);
+      brand.colorGlow = _hexDim(brand.color, 0.25);
+      sessao.j_brand = JSON.stringify(brand);
 
-    window.location.href = modo === 'admin' ? 'jarvis.html' : 'equipe.html';
+      Object.entries(sessao).forEach(([k, v]) => sessionStorage.setItem(k, v));
+      _salvarCredenciais(usr, pwd, 'jarvis.html', doc.id, sessao, brand);
+
+      window.location.href = 'jarvis.html';
+      return;
+    }
+
+    // ── CAMADA 2: Funcionário/Equipe → equipe.html ──
+    const snapFn = await db.collection('funcionarios').where('usuario', '==', usr).get();
+    if (!snapFn.empty) {
+      const docF = snapFn.docs[0];
+      const dF   = docF.data();
+
+      if (dF.senha !== pwd) throw new Error('Senha incorreta.');
+
+      const mae = await db.collection('oficinas').doc(dF.tenantId).get();
+      if (!mae.exists || mae.data().status === 'Bloqueado') throw new Error('Oficina bloqueada.');
+
+      const maeData = mae.data();
+
+      const sessao = {
+        j_tid:          dF.tenantId,
+        j_tnome:        maeData.nomeFantasia || 'Oficina',
+        j_role:         dF.cargo || 'mecanico',
+        j_nome:         dF.nome,
+        j_fid:          docF.id,
+        j_comissao:     String(dF.comissao || 0),
+        j_gemini:       maeData.apiKeys?.gemini      || '',
+        j_nicho:        maeData.nicho                || 'carros',
+        j_cloud_name:   maeData.apiKeys?.cloudName   || 'dmuvm1o6m',
+        j_cloud_preset: maeData.apiKeys?.cloudPreset || 'evolution',
+      };
+
+      const brand = {
+        name:       maeData.brandName    || maeData.nomeFantasia,
+        logoLetter: maeData.brandLetter  || (maeData.nomeFantasia || 'J').charAt(0).toUpperCase(),
+        color:      maeData.brandColor   || '#3B82F6',
+        footer:     maeData.brandFooter  || `${maeData.nomeFantasia} · Powered by JARVIS ERP`
+      };
+      brand.colorDim = _hexDim(brand.color, 0.12);
+      sessao.j_brand = JSON.stringify(brand);
+
+      Object.entries(sessao).forEach(([k, v]) => sessionStorage.setItem(k, v));
+      _salvarCredenciais(usr, pwd, 'equipe.html', dF.tenantId, sessao, brand);
+
+      window.location.href = 'equipe.html';
+      return;
+    }
+
+    throw new Error('Usuário não encontrado no sistema.');
 
   } catch (e) {
-    const err = document.getElementById('loginErr');
-    err.innerText = e.message; err.style.display = 'block';
-    btn.disabled = false; btn.innerText = 'Entrar';
+    err.textContent = e.message;
+    err.style.display = 'block';
+    btn.innerHTML = 'Entrar no Sistema';
+    btn.disabled = false;
   }
+}
+
+function _salvarCredenciais(usr, pwd, destino, tid, session, brand) {
+  const lembrar = document.getElementById('rememberMe').checked;
+  if (lembrar) {
+    localStorage.setItem('j_saved_login', JSON.stringify({ usr, pwd, destino, tid, session }));
+    localStorage.setItem('j_saved_brand', JSON.stringify(brand));
+  } else {
+    localStorage.removeItem('j_saved_login');
+    localStorage.removeItem('j_saved_brand');
+  }
+}
+
+function _hexDim(hex, alpha) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0,2), 16);
+  const g = parseInt(c.substring(2,4), 16);
+  const b = parseInt(c.substring(4,6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 </script>
 </body>
