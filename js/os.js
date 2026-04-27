@@ -185,8 +185,11 @@ window.enviarWppB2C = function(id) {
     const loginUser = cli?.login || os.placa || cliNome.split(' ')[0].toLowerCase();
     const pin = cli?.pin || os.pin || '';
 
-    // ✅ Link correto para GitHub Pages
-    const link = 'https://tsvalencio-ia.github.io/oficina1/cliente.html';
+    // Link correto: governo → clienteOficial, demais → cliente
+    const isGov = cli?.tipoCliente === 'governo';
+    const link = isGov
+      ? 'https://tsvalencio-ia.github.io/of/clienteOficial.html'
+      : 'https://tsvalencio-ia.github.io/of/cliente.html';
 
     const totalFmt = (os.total || 0).toFixed(2).replace('.', ',');
 
